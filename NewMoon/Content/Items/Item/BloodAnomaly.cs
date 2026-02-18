@@ -72,16 +72,45 @@ namespace NewMoon.Items
 			hiddenForceTriggerCount.isHidden = true;
 			base.Init();
 		}
-
-		public override void Hooks()
+        public override void PostInit()
         {
-			On.RoR2.HealthComponent.TakeDamage += BloodRelicOnDamageDealt;
+            base.PostInit();
+
+			CraftableDef craftable = ScriptableObject.CreateInstance<CraftableDef>();
+			craftable.pickup = this.ItemsDef;
+
+			RecipeIngredient corpsebloom = new RecipeIngredient();
+			corpsebloom.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_RepeatHeal.RepeatHeal_asset).WaitForCompletion();
+			corpsebloom.type = IngredientTypeIndex.AssetReference;
+			RecipeIngredient gesture = new RecipeIngredient();
+			gesture.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_AutoCastEquipment.AutoCastEquipment_asset).WaitForCompletion();
+			gesture.type = IngredientTypeIndex.AssetReference;
+			RecipeIngredient focon = new RecipeIngredient();
+			focon.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_FocusConvergence.FocusConvergence_asset).WaitForCompletion();
+			focon.type = IngredientTypeIndex.AssetReference;
+
+			RecipeIngredient anyQuest = new RecipeIngredient();
+			anyQuest.requiredTags = new ItemTag[] { ItemTag.ObjectiveRelated };
+			anyQuest.forbiddenTags = new ItemTag[] { ItemTag.Count };
+			anyQuest.type = IngredientTypeIndex.AnyItem;
+			RecipeIngredient anyOnKill = new RecipeIngredient();
+			anyOnKill.requiredTags = new ItemTag[] { ItemTag.OnKillEffect };
+			anyOnKill.forbiddenTags = new ItemTag[] { ItemTag.Count };
+			anyOnKill.type = IngredientTypeIndex.AnyItem;
+
+			craftable.AddAllRecipePermutations(new RecipeIngredient[] { corpsebloom, gesture, focon }, new RecipeIngredient[] { anyQuest, anyOnKill });
+			Content.AddCraftableDef(craftable);
+		}
+
+        public override void Hooks()
+        {
+			GlobalEventManager.onServerDamageDealt += BloodRelicOnDamageDealt;
             GlobalEventManager.onCharacterDeathGlobal += BloodRelicOnKill;
         }
 
-        private void BloodRelicOnDamageDealt(On.RoR2.HealthComponent.orig_TakeDamage orig, HealthComponent self, DamageInfo damageInfo)
+        private void BloodRelicOnDamageDealt(DamageReport damageReport)
         {
-			orig(self, damageInfo);
+			DamageInfo damageInfo = damageReport.damageInfo;
 			if (!NetworkServer.active)
 				return;
 
@@ -89,31 +118,31 @@ namespace NewMoon.Items
 			if (!attacker)
 				return;
 
-			CharacterBody victimBody = self.body;
+			CharacterBody victimBody = damageReport.victimBody;
 			if (attacker.TryGetComponent(out CharacterBody attackerBody) && victimBody && victimBody.isChampion)
 			{
 				int itemCount = GetCount(attackerBody);
 				int itemCountTotal = attackerBody.teamComponent ? itemCount : Util.GetItemCountForTeam(attackerBody.teamComponent.teamIndex, ItemsDef.itemIndex, false, false);
 				int buffCount = victimBody.GetBuffCount(hiddenForceTriggerCount);
-				if(itemCountTotal > 0)
-                {
+				if (itemCountTotal > 0)
+				{
 					int maxTriggers = onKillForceTriggersBase + onKillForceTriggersStack * (itemCountTotal - 1);
 					float thresholdPerTrigger = 1 / ((float)maxTriggers + 1);
 					float nextThreshold = thresholdPerTrigger * (buffCount + 1);
 
 					HealthComponent victimHealthComponent = victimBody.healthComponent;
 					if (victimHealthComponent.combinedHealthFraction <= 1 - nextThreshold)
-                    {
+					{
 						victimBody.AddBuff(hiddenForceTriggerCount);
 						List<CharacterBody> list = (from master in CharacterMaster.instancesList
 													select master.GetBody() into body
 													where body && body.teamComponent.teamIndex == TeamIndex.Player && base.GetCount(body) > 0
 													select body).ToList<CharacterBody>();
 						MakeFakeDeath(victimHealthComponent, damageInfo, list);
-                    }
+					}
 				}
 			}
-        }
+		}
 
         private void BloodRelicOnKill(DamageReport damageReport)
         {
