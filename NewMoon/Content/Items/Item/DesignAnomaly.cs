@@ -97,6 +97,7 @@ namespace NewMoon.Items
             anyDamage.forbiddenTags = new ItemTag[] { ItemTag.Count };
             anyDamage.type = IngredientTypeIndex.AnyItem;
 
+            craftable.recipes = new Recipe[0];
             craftable.AddAllRecipePermutations(new RecipeIngredient[] { gouge, trans, purity }, new RecipeIngredient[] { anyQuest, anyDamage });
             Content.AddCraftableDef(craftable);
         }

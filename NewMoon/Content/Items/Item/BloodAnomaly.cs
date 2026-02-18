@@ -100,6 +100,7 @@ namespace NewMoon.Items
 			anyOnKill.forbiddenTags = new ItemTag[] { ItemTag.Count };
 			anyOnKill.type = IngredientTypeIndex.AnyItem;
 
+			craftable.recipes = new Recipe[0];
 			craftable.AddAllRecipePermutations(new RecipeIngredient[] { corpsebloom, gesture, focon }, new RecipeIngredient[] { anyQuest, anyOnKill });
 			Content.AddCraftableDef(craftable);
 		}

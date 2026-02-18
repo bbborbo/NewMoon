@@ -83,6 +83,7 @@ namespace NewMoon.Items
             anyFood.forbiddenTags = new ItemTag[] { ItemTag.Count };
             anyFood.type = IngredientTypeIndex.AnyItem;
 
+            craftable.recipes = new Recipe[0];
             craftable.AddAllRecipePermutations(new RecipeIngredient[] { neutronium, rachis, stoneflux, meteor }, new RecipeIngredient[] { anyQuest, anyFood });
             Content.AddCraftableDef(craftable);
         }
