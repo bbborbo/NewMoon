@@ -69,6 +69,35 @@ namespace NewMoon.Items
                 Addressables.LoadAssetAsync<Sprite>("RoR2/Base/LunarSkillReplacements/texBuffLunarDetonatorIcon.tif").WaitForCompletion(),
                 Color.cyan, true, false);
         }
+        public override void PostInit()
+        {
+            base.PostInit();
+
+            CraftableDef craftable = ScriptableObject.CreateInstance<CraftableDef>();
+            craftable.pickup = this.ItemsDef;
+
+            RecipeIngredient gouge = new RecipeIngredient();
+            gouge.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_MonstersOnShrineUse.MonstersOnShrineUse_asset).WaitForCompletion();
+            gouge.type = IngredientTypeIndex.AssetReference;
+            RecipeIngredient trans = new RecipeIngredient();
+            trans.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_ShieldOnly.ShieldOnly_asset).WaitForCompletion();
+            trans.type = IngredientTypeIndex.AssetReference;
+            RecipeIngredient purity = new RecipeIngredient();
+            purity.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_LunarBadLuck.LunarBadLuck_asset).WaitForCompletion();
+            purity.type = IngredientTypeIndex.AssetReference;
+
+            RecipeIngredient anyQuest = new RecipeIngredient();
+            anyQuest.requiredTags = new ItemTag[] { ItemTag.ObjectiveRelated };
+            anyQuest.forbiddenTags = new ItemTag[] { ItemTag.Count };
+            anyQuest.type = IngredientTypeIndex.AnyItem;
+            RecipeIngredient anyDamage = new RecipeIngredient();
+            anyDamage.requiredTags = new ItemTag[] { ItemTag.MobilityRelated };
+            anyDamage.forbiddenTags = new ItemTag[] { ItemTag.Count };
+            anyDamage.type = IngredientTypeIndex.AnyItem;
+
+            craftable.AddAllRecipePermutations(new RecipeIngredient[] { gouge, trans, purity }, new RecipeIngredient[] { anyQuest, anyDamage });
+            Content.AddCraftableDef(craftable);
+        }
 
         public override void Hooks()
         {
