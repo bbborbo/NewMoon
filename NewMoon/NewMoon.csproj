@@ -45,6 +45,9 @@
     <Reference Include="RainrotSharedUtils">
       <HintPath>libs\RainrotSharedUtils.dll</HintPath>
     </Reference>
+    <Reference Include="MoreStats">
+      <HintPath>libs\MoreStats.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>
