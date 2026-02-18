@@ -6,11 +6,38 @@ using System.Text;
 using UnityEngine;
 using RoR2;
 using UnityEngine.Events;
+using System.Linq;
 
 namespace NewMoon
 {
     public static class Extensions
     {
+        public static void AddAllRecipePermutations(this CraftableDef craftableDef, RecipeIngredient[] firstSlotIngredients, RecipeIngredient[] secondSlotIngredients)
+        {
+            List<Recipe> recipes = new List<Recipe>();
+
+            foreach (RecipeIngredient first in firstSlotIngredients)
+            {
+                foreach (RecipeIngredient second in secondSlotIngredients)
+                {
+                    Recipe newRecipe = new Recipe();
+                    newRecipe.ingredients = new RecipeIngredient[]
+                    {
+                        first,
+                        second
+                    };
+                    recipes.Add(newRecipe);
+                }
+            }
+
+            if (craftableDef.recipes.Length == 0)
+            {
+                craftableDef.recipes = recipes.ToArray();
+                return;
+            }
+            craftableDef.recipes = craftableDef.recipes.Concat(recipes).ToArray();
+        }
+
         /// <summary>
         /// if true, this interactable can trigger fireworks, squolyps, and your custom on-interaction effect
         /// </summary>
