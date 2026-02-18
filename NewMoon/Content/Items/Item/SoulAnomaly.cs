@@ -63,6 +63,38 @@ namespace NewMoon.Items
             On.RoR2.CharacterBody.OnInventoryChanged += AddItemBehavior;
             GetStatCoefficients += SpiritSpeedBoosts;
         }
+        public override void PostInit()
+        {
+            base.PostInit();
+
+            CraftableDef craftable = ScriptableObject.CreateInstance<CraftableDef>();
+            craftable.pickup = this.ItemsDef;
+
+            RecipeIngredient glass = new RecipeIngredient();
+            glass.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_LunarDagger.LunarDagger_asset).WaitForCompletion();
+            glass.type = IngredientTypeIndex.AssetReference;
+            RecipeIngredient crown = new RecipeIngredient();
+            crown.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_GoldOnHit.GoldOnHit_asset).WaitForCompletion();
+            crown.type = IngredientTypeIndex.AssetReference;
+            RecipeIngredient lightflux = new RecipeIngredient();
+            lightflux.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_DLC1_HalfAttackSpeedHalfCooldowns.HalfAttackSpeedHalfCooldowns_asset).WaitForCompletion();
+            lightflux.type = IngredientTypeIndex.AssetReference;
+            RecipeIngredient effigy = new RecipeIngredient();
+            effigy.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_CrippleWard.CrippleWard_asset).WaitForCompletion();
+            effigy.type = IngredientTypeIndex.AssetReference;
+
+            RecipeIngredient anyQuest = new RecipeIngredient();
+            anyQuest.requiredTags = new ItemTag[] { ItemTag.ObjectiveRelated };
+            anyQuest.forbiddenTags = new ItemTag[] { ItemTag.Count };
+            anyQuest.type = IngredientTypeIndex.AnyItem;
+            RecipeIngredient anyDamage = new RecipeIngredient();
+            anyDamage.requiredTags = new ItemTag[] { ItemTag.Damage };
+            anyDamage.forbiddenTags = new ItemTag[] { ItemTag.Count };
+            anyDamage.type = IngredientTypeIndex.AnyItem;
+
+            craftable.AddAllRecipePermutations(new RecipeIngredient[] { glass, crown, lightflux, effigy }, new RecipeIngredient[] { anyQuest, anyDamage });
+            Content.AddCraftableDef(craftable);
+        }
 
         private void SpiritSpeedBoosts(CharacterBody sender, StatHookEventArgs args)
         {
