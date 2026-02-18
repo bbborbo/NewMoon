@@ -1,0 +1,55 @@
+﻿using BepInEx.Configuration;
+using BepInEx.Logging;
+using RoR2.ExpansionManagement;
+using NewMoon.Modules;
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.AddressableAssets;
+
+namespace NewMoon
+{
+    public abstract class SharedBase
+    {
+        public virtual int loadOrder => 0;
+        public virtual bool forcePrerequisites { get; } = false;
+        public abstract string ConfigName { get; }
+        public virtual bool isEnabled { get; } = true;
+        public static ManualLogSource Logger => Log._logSource;
+        public abstract AssetBundle assetBundle { get; }
+
+        public abstract void Hooks();
+        public abstract void Lang();
+
+        public virtual bool GetPrerequisites() => true;
+
+        public virtual void Init()
+        {
+            ConfigManager.HandleConfigAttributes(GetType(), ConfigName, Config.MyConfig);
+            Hooks();
+            Lang();
+            NewMoonPlugin.onLoaded += PostInit;
+        }
+
+        public T Bind<T>(T defaultValue, string configName, string configDesc = "")
+        {
+            return ConfigManager.DualBindToConfig<T>(ConfigName, Config.MyConfig, configName, defaultValue, configDesc);
+        }
+        public virtual void PostInit()
+        {
+
+        }
+
+        public static float GetHyperbolic(float firstStack, float cap, float chance) // Util.ConvertAmplificationPercentageIntoReductionPercentage but Better :zanysoup:
+        {
+            if (firstStack >= cap) return cap * (chance / firstStack); // should not happen, but failsafe
+            float count = chance / firstStack;
+            float coeff = 100 * firstStack / (cap - firstStack); // should be good
+            return cap * (1 - (100 / ((count * coeff) + 100)));
+        }
+        public static ExpansionDef SotvExpansionDef()
+        {
+            return Addressables.LoadAssetAsync<ExpansionDef>("RoR2/DLC1/Common/DLC1.asset").WaitForCompletion();
+        }
+    }
+}
