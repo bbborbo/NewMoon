@@ -57,19 +57,21 @@ namespace NewMoon.Items
             base.PostInit();
 
             CraftableDef craftable = ScriptableObject.CreateInstance<CraftableDef>();
+            craftable.name = "CRAFTABLE_" + this.ItemLangTokenName;
             craftable.pickup = this.ItemsDef;
+            craftable.itemIndex = this.ItemsDef.itemIndex;
 
             RecipeIngredient neutronium = new RecipeIngredient();
-            neutronium.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_MonstersOnShrineUse.MonstersOnShrineUse_asset).WaitForCompletion();
+            neutronium.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_DLC3_Items_TransferDebuffOnHit.TransferDebuffOnHit_asset).WaitForCompletion();
             neutronium.type = IngredientTypeIndex.AssetReference;
             RecipeIngredient rachis = new RecipeIngredient();
-            rachis.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_ShieldOnly.ShieldOnly_asset).WaitForCompletion();
+            rachis.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_RandomDamageZone.RandomDamageZone_asset).WaitForCompletion();
             rachis.type = IngredientTypeIndex.AssetReference;
             RecipeIngredient stoneflux = new RecipeIngredient();
-            stoneflux.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_LunarBadLuck.LunarBadLuck_asset).WaitForCompletion();
+            stoneflux.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_DLC1_HalfSpeedDoubleHealth.HalfSpeedDoubleHealth_asset).WaitForCompletion();
             stoneflux.type = IngredientTypeIndex.AssetReference;
             RecipeIngredient meteor = new RecipeIngredient();
-            meteor.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_LunarBadLuck.LunarBadLuck_asset).WaitForCompletion();
+            meteor.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_Meteor.Meteor_asset).WaitForCompletion();
             meteor.type = IngredientTypeIndex.AssetReference;
 
             RecipeIngredient anyQuest = new RecipeIngredient();

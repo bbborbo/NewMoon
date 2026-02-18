@@ -77,7 +77,9 @@ namespace NewMoon.Items
             base.PostInit();
 
 			CraftableDef craftable = ScriptableObject.CreateInstance<CraftableDef>();
+			craftable.name = "CRAFTABLE_" + this.ItemLangTokenName;
 			craftable.pickup = this.ItemsDef;
+			craftable.itemIndex = this.ItemsDef.itemIndex;
 
 			RecipeIngredient corpsebloom = new RecipeIngredient();
 			corpsebloom.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_RepeatHeal.RepeatHeal_asset).WaitForCompletion();

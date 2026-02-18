@@ -68,7 +68,9 @@ namespace NewMoon.Items
             base.PostInit();
 
             CraftableDef craftable = ScriptableObject.CreateInstance<CraftableDef>();
+            craftable.name = "CRAFTABLE_" + this.ItemLangTokenName;
             craftable.pickup = this.ItemsDef;
+            craftable.itemIndex = this.ItemsDef.itemIndex;
 
             RecipeIngredient glass = new RecipeIngredient();
             glass.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_LunarDagger.LunarDagger_asset).WaitForCompletion();
