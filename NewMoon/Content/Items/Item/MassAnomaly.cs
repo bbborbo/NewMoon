@@ -1,12 +1,14 @@
 ﻿using BepInEx.Configuration;
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
+using NewMoon.Modules;
 using R2API;
 using RoR2;
 using System;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 
 namespace NewMoon.Items
 {
@@ -49,6 +51,38 @@ namespace NewMoon.Items
         public override ItemDisplayRuleDict CreateItemDisplayRules()
         {
             return null;
+        }
+        public override void PostInit()
+        {
+            base.PostInit();
+
+            CraftableDef craftable = ScriptableObject.CreateInstance<CraftableDef>();
+            craftable.pickup = this.ItemsDef;
+
+            RecipeIngredient neutronium = new RecipeIngredient();
+            neutronium.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_MonstersOnShrineUse.MonstersOnShrineUse_asset).WaitForCompletion();
+            neutronium.type = IngredientTypeIndex.AssetReference;
+            RecipeIngredient rachis = new RecipeIngredient();
+            rachis.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_ShieldOnly.ShieldOnly_asset).WaitForCompletion();
+            rachis.type = IngredientTypeIndex.AssetReference;
+            RecipeIngredient stoneflux = new RecipeIngredient();
+            stoneflux.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_LunarBadLuck.LunarBadLuck_asset).WaitForCompletion();
+            stoneflux.type = IngredientTypeIndex.AssetReference;
+            RecipeIngredient meteor = new RecipeIngredient();
+            meteor.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_LunarBadLuck.LunarBadLuck_asset).WaitForCompletion();
+            meteor.type = IngredientTypeIndex.AssetReference;
+
+            RecipeIngredient anyQuest = new RecipeIngredient();
+            anyQuest.requiredTags = new ItemTag[] { ItemTag.ObjectiveRelated };
+            anyQuest.forbiddenTags = new ItemTag[] { ItemTag.Count };
+            anyQuest.type = IngredientTypeIndex.AnyItem;
+            RecipeIngredient anyFood = new RecipeIngredient();
+            anyFood.requiredTags = new ItemTag[] { ItemTag.FoodRelated };
+            anyFood.forbiddenTags = new ItemTag[] { ItemTag.Count };
+            anyFood.type = IngredientTypeIndex.AnyItem;
+
+            craftable.AddAllRecipePermutations(new RecipeIngredient[] { neutronium, rachis, stoneflux, meteor }, new RecipeIngredient[] { anyQuest, anyFood });
+            Content.AddCraftableDef(craftable);
         }
 
         public override void Hooks()
