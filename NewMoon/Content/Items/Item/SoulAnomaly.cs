@@ -9,6 +9,7 @@ using UnityEngine.Networking;
 using static R2API.RecalculateStatsAPI;
 using UnityEngine.AddressableAssets;
 using NewMoon.Modules;
+using System.Linq;
 
 namespace NewMoon.Items
 {
@@ -89,13 +90,15 @@ namespace NewMoon.Items
             anyQuest.requiredTags = new ItemTag[] { ItemTag.ObjectiveRelated };
             anyQuest.forbiddenTags = new ItemTag[] { ItemTag.Count };
             anyQuest.type = IngredientTypeIndex.AnyItem;
-            RecipeIngredient anyDamage = new RecipeIngredient();
-            anyDamage.requiredTags = new ItemTag[] { ItemTag.Damage };
-            anyDamage.forbiddenTags = new ItemTag[] { ItemTag.Count };
-            anyDamage.type = IngredientTypeIndex.AnyItem;
+            anyQuest.itemTier = ItemTier.Boss;
+            RecipeIngredient[] anyWithTags = Tools.GetAllIngredientsWithTags(
+                required: new ItemTag[] { ItemTag.Damage },
+                forbidden: new ItemTag[] { },
+                maxTier: 3
+                );
 
             craftable.recipes = new Recipe[0];
-            craftable.AddAllRecipePermutations(new RecipeIngredient[] { glass, crown, lightflux, effigy }, new RecipeIngredient[] { anyQuest, anyDamage });
+            craftable.AddAllRecipePermutations(new RecipeIngredient[] { glass, crown, lightflux/*, effigy*/ }, anyWithTags.Append(anyQuest).ToArray());
             Content.AddCraftableDef(craftable);
         }
 

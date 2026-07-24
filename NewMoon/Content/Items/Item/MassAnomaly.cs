@@ -1,14 +1,21 @@
 ﻿using BepInEx.Configuration;
-using Mono.Cecil.Cil;
-using MonoMod.Cil;
-using NewMoon.Modules;
 using R2API;
 using RoR2;
+using NewMoon.Modules;
 using System;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using UnityEngine.Networking;
+using static R2API.RecalculateStatsAPI;
+using static NewMoon.Modules.Language.Styling;
+using System.Linq;
+using static RoR2.Items.BaseItemBodyBehavior;
+using RoR2.Items;
+using MoreStats;
+
+[assembly: HG.Reflection.SearchableAttribute.OptIn]
 
 namespace NewMoon.Items
 {
@@ -20,24 +27,25 @@ namespace NewMoon.Items
             return NewMoonPlugin.DoPillarItemDrop;
         }
         public override string ConfigName => "Items : Commencement : Relic of Mass";
-
-        public static int baseArmorCount = 3;
-        public static int armorPerPercent = 10;
-        public static int armorDecayPerSecond = armorPerPercent * 4;
-        public static int armorCap = armorPerPercent * 40;
+        public static BuffDef beetleArmor;
+        public static int maxBeetleArmorStacks = 3;
+        public static int durationPerBeetleArmor = 3;
+        public static int armorPerBuffBase = 50;
+        public static int armorPerBuffStack = 25;
+        public static float retaliateCrippleDuration = 9f;
 
         public override string ItemName => "Relic of Mass";
 
         public override string ItemLangTokenName => "MASSANOMALY";
 
-        public override string ItemPickupDesc => "Reduce damage taken from successive hits."; //Temporarily reduce damage taken after getting hit?
+        public override string ItemPickupDesc => "Periodically gain protection from damage.";
 
-        public override string ItemFullDescription => $"When taking damage, " +
-            $"gain <style=cIsHealing>{armorPerPercent} temporary armor</style> " +
-            $"<style=cStack>(+{armorPerPercent} per stack)</style> " +
-            $"per <style=cIsHealth>1%</style> of health lost. " +
-            $"<style=cIsUtility>This temporary armor caps at {armorCap} " +
-            $"and decays {armorDecayPerSecond} per second.</style>";
+        public override string ItemFullDescription => $"After not taking damage for {UtilityColor($"{durationPerBeetleArmor}")} seconds, " +
+            $"gain a layer of {DamageColor("Chimera Armor")}, up to {UtilityColor($"{maxBeetleArmorStacks}")} times. " +
+            $"Each layer of {DamageColor("Chimera Armor")} " +
+            $"increases {HealingColor("armor")} by {HealingColor($"{armorPerBuffBase}")} {StackText("+" + armorPerBuffStack)}. " +
+            $"Taking damage while protected strips 1 layer of {DamageColor("Chimera Armor")}, " +
+            $"{DamageColor("Crippling")} the enemy who attacked you for {retaliateCrippleDuration}s.";
 
         public override string ItemLore => "";
 
@@ -52,6 +60,14 @@ namespace NewMoon.Items
         {
             return null;
         }
+        public override void Init()
+        {
+            base.Init();
+            beetleArmor = Content.CreateAndAddBuff("bdAnomalyArmor",
+                Addressables.LoadAssetAsync<Sprite>("RoR2/Base/LunarSkillReplacements/texBuffLunarDetonatorIcon.tif").WaitForCompletion(),
+                Color.cyan, true, false);
+        }
+
         public override void PostInit()
         {
             base.PostInit();
@@ -78,81 +94,106 @@ namespace NewMoon.Items
             anyQuest.requiredTags = new ItemTag[] { ItemTag.ObjectiveRelated };
             anyQuest.forbiddenTags = new ItemTag[] { ItemTag.Count };
             anyQuest.type = IngredientTypeIndex.AnyItem;
-            RecipeIngredient anyFood = new RecipeIngredient();
-            anyFood.requiredTags = new ItemTag[] { ItemTag.FoodRelated };
-            anyFood.forbiddenTags = new ItemTag[] { ItemTag.Count };
-            anyFood.type = IngredientTypeIndex.AnyItem;
+            anyQuest.itemTier = ItemTier.Boss;
+            RecipeIngredient[] anyWithTags = Tools.GetAllIngredientsWithTags(
+                required: new ItemTag[] { ItemTag.FoodRelated },
+                forbidden: new ItemTag[] { },
+                maxTier: 1
+                );
 
             craftable.recipes = new Recipe[0];
-            craftable.AddAllRecipePermutations(new RecipeIngredient[] { neutronium, rachis, stoneflux, meteor }, new RecipeIngredient[] { anyQuest, anyFood });
+            craftable.AddAllRecipePermutations(new RecipeIngredient[] { neutronium, rachis, stoneflux/*, meteor*/ }, anyWithTags.Append(anyQuest).ToArray());
             Content.AddCraftableDef(craftable);
         }
 
         public override void Hooks()
         {
-            IL.RoR2.HealthComponent.TakeDamageProcess += NerfAdaptiveArmor;
-            IL.RoR2.HealthComponent.ServerFixedUpdate += AdaptiveArmorDecay;
-            On.RoR2.HealthComponent.ServerFixedUpdate += Fuck;
-            On.RoR2.HealthComponent.OnInventoryChanged += AdaptiveArmorHook;
+            //On.RoR2.HealthComponent.TakeDamageProcess += BackstabDamageReduction;
+            GetStatCoefficients += ArmorBoost;
         }
 
-        private void Fuck(On.RoR2.HealthComponent.orig_ServerFixedUpdate orig, HealthComponent self, float deltaTime)
+        private void ArmorBoost(CharacterBody sender, StatHookEventArgs args)
         {
-            orig(self, deltaTime);
-            if(self.itemCounts.adaptiveArmor > 0)
+            int itemCount = GetCount(sender);
+            int buffCount = sender.GetBuffCount(beetleArmor);
+            if (itemCount > 0 && buffCount > 0)
             {
-                //Debug.Log(self.adaptiveArmorValue);
+                int armorPerBuff = armorPerBuffBase + armorPerBuffStack * (itemCount - 1);
+                args.armorAdd += armorPerBuff * buffCount;
+            }
+        }
+    }
+    public class MassAnomalyBehavior : BaseItemBodyBehavior
+    {
+        [ItemDefAssociation(useOnServer = true, useOnClient = false)]
+        private static ItemDef GetItemDef() => MassAnomaly.instance.ItemsDef;
+
+        float beetleArmorInterval => MassAnomaly.durationPerBeetleArmor;
+        float beetleArmorStopwatch;
+        void OnBeetleProtectionGained()
+        {
+            GlobalEventManager.onServerDamageDealt += OnServerDamageDealt;
+        }
+        void OnBeetleProtectionCleared()
+        {
+            GlobalEventManager.onServerDamageDealt -= OnServerDamageDealt;
+        }
+
+        private void OnServerDamageDealt(DamageReport damageReport)
+        {
+            if (damageReport.victimBody != this.body || damageReport.attackerBody == this.body)
+                return;
+            if (damageReport.damageInfo.procCoefficient == 0)
+                return;
+            if (damageReport.damageInfo.damageType.damageType.HasFlag(DamageType.Silent))
+                return;
+
+            int buffCount = body.GetBuffCount(MassAnomaly.beetleArmor);
+            if (buffCount > 0)
+            {
+                body.RemoveBuff(MassAnomaly.beetleArmor);
+                if (damageReport.attackerBody)
+                    damageReport.attackerBody.AddTimedBuff(RoR2Content.Buffs.Cripple, MassAnomaly.retaliateCrippleDuration);
+            }
+            if (buffCount <= 1)
+            {
+                OnBeetleProtectionCleared();
             }
         }
 
-        private void AdaptiveArmorDecay(ILContext il)
+        private void FixedUpdate()
         {
-            ILCursor c = new ILCursor(il);
-
-            c.GotoNext(MoveType.Before,
-                x => x.MatchLdfld<HealthComponent>("adaptiveArmorValue"),
-                x => x.MatchLdcR4(out _)
-                //, x => x.MatchCallOrCallvirt<Time>(nameof(Time.fixedDeltaTime))
-                );
-            c.Index++;
-            c.Next.Operand = (float)armorDecayPerSecond;
-        }
-
-        private void NerfAdaptiveArmor(ILContext il)
-        {
-            ILCursor c = new ILCursor(il);
-
-            c.GotoNext(MoveType.After,
-                x => x.MatchLdflda<HealthComponent>("itemCounts"),
-                x => x.MatchLdfld<HealthComponent.ItemCounts>("adaptiveArmor"),
-                x => x.MatchLdcI4(out _)
-                );
-
-            c.GotoNext(MoveType.After,
-                x => x.MatchDiv(),
-                x => x.MatchLdcR4(out _),
-                x => x.MatchMul()
-                );
-            c.GotoNext(MoveType.Before,
-                x => x.MatchLdcR4(out _),
-                x => x.MatchMul()
-                );
-            c.Next.Operand = (float)armorPerPercent;
-            
-            c.GotoNext(MoveType.Before,
-                x => x.MatchCallOrCallvirt<UnityEngine.Mathf>("Min")
-                );
-            c.Index--;
-            c.Next.Operand = (float)armorCap;
-        }
-
-        private void AdaptiveArmorHook(On.RoR2.HealthComponent.orig_OnInventoryChanged orig, RoR2.HealthComponent self)
-        {
-            orig(self);
-            if (self.body)
+            if (!NetworkServer.active)
+                return;
+            int buffCount = body.GetBuffCount(MassAnomaly.beetleArmor);
+            if (buffCount >= MassAnomaly.maxBeetleArmorStacks)
             {
-                self.itemCounts.adaptiveArmor = GetCount(self.body) +
-                    (self.body.inventory.GetItemCountEffective(RoR2.RoR2Content.Items.AdaptiveArmor) * baseArmorCount);
+                beetleArmorStopwatch = beetleArmorInterval;
+                return;
+            }
+            beetleArmorStopwatch -= Time.fixedDeltaTime;
+            if (beetleArmorStopwatch <= 0)
+            {
+                beetleArmorStopwatch += beetleArmorInterval;
+                body.AddBuff(MassAnomaly.beetleArmor);
+                if (buffCount == 0)
+                    OnBeetleProtectionGained();
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (!NetworkServer.active)
+                return;
+            int buffCount = body.GetBuffCount(MassAnomaly.beetleArmor);
+            if (buffCount > 0)
+            {
+                while (buffCount > 0)
+                {
+                    buffCount--;
+                    this.body.RemoveBuff(MassAnomaly.beetleArmor);
+                }
+                OnBeetleProtectionCleared();
             }
         }
     }

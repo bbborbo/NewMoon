@@ -95,13 +95,15 @@ namespace NewMoon.Items
 			anyQuest.requiredTags = new ItemTag[] { ItemTag.ObjectiveRelated };
 			anyQuest.forbiddenTags = new ItemTag[] { ItemTag.Count };
 			anyQuest.type = IngredientTypeIndex.AnyItem;
-			RecipeIngredient anyOnKill = new RecipeIngredient();
-			anyOnKill.requiredTags = new ItemTag[] { ItemTag.OnKillEffect };
-			anyOnKill.forbiddenTags = new ItemTag[] { ItemTag.Count };
-			anyOnKill.type = IngredientTypeIndex.AnyItem;
+			anyQuest.itemTier = ItemTier.Boss;
+			RecipeIngredient[] anyWithTags = Tools.GetAllIngredientsWithTags(
+				required: new ItemTag[] { ItemTag.OnKillEffect },
+				forbidden: new ItemTag[] { },
+				maxTier: 3
+				);
 
 			craftable.recipes = new Recipe[0];
-			craftable.AddAllRecipePermutations(new RecipeIngredient[] { corpsebloom, gesture, focon }, new RecipeIngredient[] { anyQuest, anyOnKill });
+			craftable.AddAllRecipePermutations(new RecipeIngredient[] { corpsebloom, gesture, focon }, anyWithTags.Append(anyQuest).ToArray());
 			Content.AddCraftableDef(craftable);
 		}
 

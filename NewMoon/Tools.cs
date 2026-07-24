@@ -382,5 +382,43 @@ namespace NewMoon
             }
             return count;
         }
+
+        public static RecipeIngredient[] GetAllIngredientsWithTags(ItemTag[] required, ItemTag[] forbidden, int maxTier = 3)
+        {
+            List<RecipeIngredient> ingredients = new List<RecipeIngredient>();
+
+            for(int i = 1; i <= maxTier; i++)
+            {
+                ItemTier tier = ItemTier.Tier1;
+                switch (i)
+                {
+                    case 1:
+                        tier = ItemTier.Tier1;
+                        break;
+                    case 2:
+                        tier = ItemTier.Tier2;
+                        break;
+                    case 3:
+                        tier = ItemTier.Tier3;
+                        break;
+                    case 4:
+                        tier = ItemTier.Boss;
+                        break;
+                    case 5:
+                        tier = ItemTier.FoodTier;
+                        break;
+                }
+
+
+                RecipeIngredient ingredient = new RecipeIngredient();
+                ingredient.requiredTags = required;
+                ingredient.forbiddenTags = forbidden;
+                ingredient.type = IngredientTypeIndex.AnyItem;
+                ingredient.itemTier = tier;
+                ingredients.Add(ingredient);
+            }
+
+            return ingredients.ToArray();
+        } 
     }
 }

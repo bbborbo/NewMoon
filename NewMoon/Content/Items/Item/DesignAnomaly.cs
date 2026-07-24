@@ -10,6 +10,13 @@ using UnityEngine.AddressableAssets;
 using UnityEngine.Networking;
 using static R2API.RecalculateStatsAPI;
 using static NewMoon.Modules.Language.Styling;
+using System.Linq;
+using static RoR2.Items.BaseItemBodyBehavior;
+using RoR2.Items;
+using MoreStats;
+using EntityStates.Mage;
+
+[assembly: HG.Reflection.SearchableAttribute.OptIn]
 
 namespace NewMoon.Items
 {
@@ -22,30 +29,26 @@ namespace NewMoon.Items
         }
         #region config
         public override string ConfigName => "Items : Commencement : Relic of Design";
-
-        [AutoConfig("Bonus Armor", 20)]
-        public static int bonusArmor = 20;
-        [AutoConfig("Backstab Damage Reduction", 0.4f)]
-        public static float backstabDamageReduction = 0.4f;
+        public static BuffDef HoverChargeBuff;
+        public static BuffDef HoverActiveBuff;
+        public static float rechargeDelay = 2f;
+        public static int rechargePerFrameBase = 1;
+        public static int rechargePerFrameStack = 1;
+        public static int maxHoverChargeBase = 60;
+        public static int maxHoverChargeStack = 30;
+        public static float movementSpeedWhileHoveringBase = 2f;
+        public static float movementSpeedWhileHoveringStack = 0.5f;
         #endregion
-        public static BuffDef beetleArmor;
-        public static int maxBeetleArmorStacks = 3;
-        public static int durationPerBeetleArmor = 3;
-        public static int armorPerBuffBase = 50;
-        public static int armorPerBuffStack = 25;
-        public static float retaliateCrippleDuration = 9f;
         public override string ItemName => "Relic of Design";
 
         public override string ItemLangTokenName => "DESIGNANOMALY";
 
-        public override string ItemPickupDesc => "Periodically gain protection from damage.";
+        public override string ItemPickupDesc => "Hold JUMP while falling to hover.";
 
-        public override string ItemFullDescription => $"After not taking damage for {UtilityColor($"{durationPerBeetleArmor}")} seconds, " +
-            $"gain a layer of {DamageColor("Chimera Armor")}, up to {UtilityColor($"{maxBeetleArmorStacks}")} times. " +
-            $"Each layer of {DamageColor("Chimera Armor")} " +
-            $"increases {HealingColor("armor")} by {HealingColor($"{armorPerBuffBase}")} {StackText("+" + armorPerBuffStack)}. " +
-            $"Taking damage while protected strips 1 layer of {DamageColor("Chimera Armor")}, " +
-            $"{DamageColor("Crippling")} the enemy who attacked you for {retaliateCrippleDuration}s.";
+        public override string ItemFullDescription => $"While airborne, holding JUMP allows you to float in the air with " +
+            $"{UtilityColor($"+{movementSpeedWhileHoveringBase.AsPercent()}")} movement speed {StackText($"+{movementSpeedWhileHoveringStack.AsPercent()}")} " +
+            $"for up to {UtilityColor(((float)maxHoverChargeBase / 60f).ToString())} seconds {StackText("+" + ((float)maxHoverChargeStack / 60f).ToString())}. " +
+            $"{StackColor($"Recharges {((float)rechargePerFrameStack / (float)rechargePerFrameBase).AsPercent()} faster per stack.")}";
 
         public override string ItemLore => "";
 
@@ -64,10 +67,25 @@ namespace NewMoon.Items
 
         public override void Init()
         {
+            HoverChargeBuff = Content.CreateAndAddBuff(
+                "bdDesignHoverCharge",
+                Addressables.LoadAssetAsync<BuffDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_Common.bdOnFire_asset).WaitForCompletion().iconSprite,
+                Color.grey,
+                canStack: true,
+                isDebuff: false,
+                BuffDef.StackingDisplayMethod.Percentage,
+                isHidden: false
+                );
+            HoverActiveBuff = Content.CreateAndAddBuff(
+                "bdDesignHoverActive",
+                Addressables.LoadAssetAsync<BuffDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_Common.bdOnFire_asset).WaitForCompletion().iconSprite,
+                Color.grey,
+                canStack: false,
+                isDebuff: false,
+                BuffDef.StackingDisplayMethod.Percentage,
+                isHidden: false
+                );
             base.Init();
-            beetleArmor = Content.CreateAndAddBuff("bdDesignArmor",
-                Addressables.LoadAssetAsync<Sprite>("RoR2/Base/LunarSkillReplacements/texBuffLunarDetonatorIcon.tif").WaitForCompletion(),
-                Color.cyan, true, false);
         }
         public override void PostInit()
         {
@@ -92,137 +110,140 @@ namespace NewMoon.Items
             anyQuest.requiredTags = new ItemTag[] { ItemTag.ObjectiveRelated };
             anyQuest.forbiddenTags = new ItemTag[] { ItemTag.Count };
             anyQuest.type = IngredientTypeIndex.AnyItem;
-            RecipeIngredient anyDamage = new RecipeIngredient();
-            anyDamage.requiredTags = new ItemTag[] { ItemTag.MobilityRelated };
-            anyDamage.forbiddenTags = new ItemTag[] { ItemTag.Count };
-            anyDamage.type = IngredientTypeIndex.AnyItem;
+            anyQuest.itemTier = ItemTier.Boss;
+            RecipeIngredient[] anyWithTags = Tools.GetAllIngredientsWithTags(
+                required: new ItemTag[] { ItemTag.MobilityRelated },
+                forbidden: new ItemTag[] { },
+                maxTier: 2
+                );
 
             craftable.recipes = new Recipe[0];
-            craftable.AddAllRecipePermutations(new RecipeIngredient[] { gouge, trans, purity }, new RecipeIngredient[] { anyQuest, anyDamage });
+            craftable.AddAllRecipePermutations(new RecipeIngredient[] { gouge, trans, purity }, anyWithTags.Append(anyQuest).ToArray());
             Content.AddCraftableDef(craftable);
         }
 
         public override void Hooks()
         {
-            //On.RoR2.HealthComponent.TakeDamageProcess += BackstabDamageReduction;
-            On.RoR2.CharacterBody.OnInventoryChanged += AddItemBehavior;
-            GetStatCoefficients += ArmorBoost;
+            On.EntityStates.GenericCharacterMain.FixedUpdate += Hover;
+            GetStatCoefficients += HoverMoveSpeed;
         }
 
-        private void AddItemBehavior(On.RoR2.CharacterBody.orig_OnInventoryChanged orig, RoR2.CharacterBody self)
+        private void HoverMoveSpeed(CharacterBody sender, StatHookEventArgs args)
+        {
+            if (sender.HasBuff(HoverActiveBuff))
+            {
+                int ct = GetCount(sender);
+                args.moveSpeedMultAdd += movementSpeedWhileHoveringBase + movementSpeedWhileHoveringStack * (ct - 1);
+            }
+        }
+
+        private void Hover(On.EntityStates.GenericCharacterMain.orig_FixedUpdate orig, EntityStates.GenericCharacterMain self)
         {
             orig(self);
-            if (NetworkServer.active)
+            if (self.hasCharacterMotor && self.hasInputBank && self.isAuthority)
             {
-                self.AddItemBehavior<DesignAnomalyBehavior>(GetCount(self));
-            }
-        }
-
-        private void ArmorBoost(CharacterBody sender, StatHookEventArgs args)
-        {
-            int itemCount = GetCount(sender);
-            int buffCount = sender.GetBuffCount(beetleArmor);
-            if(itemCount > 0 && buffCount > 0)
-            {
-                int armorPerBuff = armorPerBuffBase + armorPerBuffStack * (itemCount - 1);
-                args.armorAdd += armorPerBuff * buffCount;
-            }
-        }
-
-        private void BackstabDamageReduction(On.RoR2.HealthComponent.orig_TakeDamageProcess orig, RoR2.HealthComponent self, RoR2.DamageInfo damageInfo)
-        {
-            if(damageInfo.damage > 0 && damageInfo.attacker)
-            {
-                CharacterBody victimBody = self.body;
-                CharacterBody attackerBody = damageInfo.attacker.GetComponent<CharacterBody>();
-                if (victimBody && attackerBody) 
+                CharacterBody body = self.characterBody;
+                CharacterMotor motor = self.characterMotor;
+                if (body)
                 {
-                    int itemCount = GetCount(self.body);
-                    if (attackerBody)
+                    bool jumpInputDown = self.inputBank.jump.down && !self.characterMotor.isGrounded;
+                    if (jumpInputDown == true && body.HasBuff(HoverChargeBuff))
                     {
-                        Vector3 vector = attackerBody.corePosition - damageInfo.position;
-                        if (itemCount > 0 && (damageInfo.procChainMask.HasProc(ProcType.Backstab) || BackstabManager.IsBackstab(-vector, victimBody)))
+                        float verticalVelocity = motor.velocity.y;
+                        if(verticalVelocity <= float.Epsilon)
                         {
-                            float dmr = Mathf.Pow(1 - backstabDamageReduction, itemCount);
-                            damageInfo.damage *= dmr;
-
-                            Debug.Log($"Design Anomaly reduced damage by {Tools.ConvertDecimal(dmr)}!");
+                            verticalVelocity = Mathf.MoveTowards(verticalVelocity, 0, JetpackOn.hoverAcceleration * self.GetDeltaTime() * 2f); //yay magic numbers yay yay yay
+                            motor.velocity = new Vector3(motor.velocity.x, Mathf.Min(verticalVelocity, 0), motor.velocity.z);
+                            body.RemoveBuff(DesignAnomaly.HoverChargeBuff);
+                            if (!body.HasBuff(DesignAnomaly.HoverChargeBuff))
+                            {
+                                UpdateJetpackDownState(body, false);
+                            }
+                            else if (!body.HasBuff(DesignAnomaly.HoverActiveBuff))
+                                UpdateJetpackDownState(body, true);
                         }
+                    }
+                    if (jumpInputDown != self.inputBank.jump.wasDown)
+                    {
+                        UpdateJetpackDownState(body, jumpInputDown);
                     }
                 }
             }
-            orig(self, damageInfo);
+        }
+
+        private static void UpdateJetpackDownState(CharacterBody body, bool isDown)
+        {
+            if(body && body.inventory && body.inventory.GetItemCountEffective(DesignAnomaly.instance.ItemsDef) > 0)
+            {
+                if (body.TryGetComponent(out DesignAnomalyBehavior designAnomaly))
+                    designAnomaly.UpdateInputState(isDown);
+            }
         }
     }
 
-    public class DesignAnomalyBehavior : CharacterBody.ItemBehavior
+    public class DesignAnomalyBehavior : BaseItemBodyBehavior
     {
-        float beetleArmorInterval = DesignAnomaly.durationPerBeetleArmor;
-        float beetleArmorStopwatch;
-        void OnBeetleArmorGained()
+        [ItemDefAssociation(useOnServer = true, useOnClient = false)]
+        private static ItemDef GetItemDef() => DesignAnomaly.instance.ItemsDef;
+
+        public bool isHoverButtonHeld = false;
+        private float rechargeDelayCountdown = 0;
+
+        public void UpdateInputState(bool isDown)
         {
-            GlobalEventManager.onServerDamageDealt += OnServerDamageDealt;
-        }
-        void OnBeetleArmorRemoved()
-        {
-            GlobalEventManager.onServerDamageDealt -= OnServerDamageDealt;
+            isHoverButtonHeld = isDown;
+            if(isDown && IsFalling(body))
+            {
+                if(!body.HasBuff(DesignAnomaly.HoverActiveBuff))
+                    body.AddBuff(DesignAnomaly.HoverActiveBuff);
+            }
+            else if (body.HasBuff(DesignAnomaly.HoverActiveBuff))
+                body.RemoveBuff(DesignAnomaly.HoverActiveBuff);
         }
 
-        private void OnServerDamageDealt(DamageReport damageReport)
+        private static bool IsFalling(CharacterBody body)
         {
-            if (damageReport.victimBody != this.body || damageReport.attackerBody == this.body)
-                return;
-            if (damageReport.damageInfo.procCoefficient == 0)
-                return;
-            if (damageReport.damageInfo.damageType.damageType.HasFlag(DamageType.Silent))
-                return;
-
-            int buffCount = body.GetBuffCount(DesignAnomaly.beetleArmor);
-            if (buffCount > 0)
-            {
-                body.RemoveBuff(DesignAnomaly.beetleArmor);
-                if (damageReport.attackerBody)
-                    damageReport.attackerBody.AddTimedBuff(RoR2Content.Buffs.Cripple, DesignAnomaly.retaliateCrippleDuration);
-            }
-            if(buffCount <= 1)
-            {
-                OnBeetleArmorRemoved();
-            }
+            return body.characterMotor.velocity.y <= 0.2f && !body.characterMotor.isGrounded;
         }
 
         private void FixedUpdate()
         {
-            if (!NetworkServer.active)
-                return;
-            int buffCount = body.GetBuffCount(DesignAnomaly.beetleArmor);
-            if(buffCount >= DesignAnomaly.maxBeetleArmorStacks)
+            if (isHoverButtonHeld)
             {
-                beetleArmorStopwatch = beetleArmorInterval;
+                if(IsFalling(body))
+                {
+                    rechargeDelayCountdown = DesignAnomaly.rechargeDelay;
+                    return;
+                }
+            }
+            if(rechargeDelayCountdown > 0)
+            {
+                rechargeDelayCountdown -= Time.fixedDeltaTime;
                 return;
             }
-            beetleArmorStopwatch -= Time.fixedDeltaTime;
-            if(beetleArmorStopwatch <= 0)
+            int recharge = DesignAnomaly.rechargePerFrameBase + DesignAnomaly.rechargePerFrameStack * (stack - 1);
+            int maxCharge = DesignAnomaly.maxHoverChargeBase + DesignAnomaly.maxHoverChargeStack * (stack - 1);
+            for(int i = 0; i < recharge; i++)
             {
-                beetleArmorStopwatch += beetleArmorInterval;
-                body.AddBuff(DesignAnomaly.beetleArmor);
-                if (buffCount == 0)
-                    OnBeetleArmorGained();
+                if (body.GetBuffCount(DesignAnomaly.HoverChargeBuff) >= maxCharge)
+                    break;
+                body.AddBuff(DesignAnomaly.HoverChargeBuff);
             }
         }
 
+        private void OnEnable()
+        {
+            int maxCharge = DesignAnomaly.maxHoverChargeBase + DesignAnomaly.maxHoverChargeStack * (stack - 1);
+            for (int i = body.GetBuffCount(DesignAnomaly.HoverChargeBuff); i < maxCharge; i++)
+            {
+                body.AddBuff(DesignAnomaly.HoverChargeBuff);
+            }
+        }
         private void OnDisable()
         {
-            if (!NetworkServer.active)
-                return;
-            int buffCount = body.GetBuffCount(DesignAnomaly.beetleArmor);
-            if(buffCount > 0)
+            for (int i = body.GetBuffCount(DesignAnomaly.HoverChargeBuff); i == 0; i--)
             {
-                while (buffCount > 0)
-                {
-                    buffCount--;
-                    this.body.RemoveBuff(DesignAnomaly.beetleArmor);
-                }
-                OnBeetleArmorRemoved();
+                body.RemoveBuff(DesignAnomaly.HoverChargeBuff);
             }
         }
     }
