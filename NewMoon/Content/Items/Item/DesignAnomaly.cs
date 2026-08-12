@@ -184,7 +184,7 @@ namespace NewMoon.Items
     public class DesignAnomalyBehavior : BaseItemBodyBehavior
     {
         [ItemDefAssociation(useOnServer = true, useOnClient = false)]
-        private static ItemDef GetItemDef() => DesignAnomaly.instance.ItemsDef;
+        private static ItemDef GetItemDef() => DesignAnomaly.instance?.ItemsDef ?? null;
 
         public bool isHoverButtonHeld = false;
         private float rechargeDelayCountdown = 0;
