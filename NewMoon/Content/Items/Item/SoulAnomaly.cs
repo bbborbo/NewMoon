@@ -10,6 +10,11 @@ using static R2API.RecalculateStatsAPI;
 using UnityEngine.AddressableAssets;
 using NewMoon.Modules;
 using System.Linq;
+using RoR2.Projectile;
+using static MoreStats.OnHit;
+using static R2API.ProcTypeAPI;
+using static NewMoon.Modules.Language.Styling;
+using EntityStates.LunarWisp;
 
 namespace NewMoon.Items
 {
@@ -29,21 +34,38 @@ namespace NewMoon.Items
         public static float maxMoveMultAdd = 1.3f;
         [AutoConfig("Max Bonus Attack Speed Multiplier", 1.3f)]
         public static float maxAttackMultAdd = 1.3f;
+
+        public static float procChanceMin = 5f;
+        public static float procChanceBase = 3f;
+        public static float procChanceStack = 3f;
+
+        public static float soulProjectileDamageCoefficient = 6f;
         #endregion
+
+        public static ModdedProcType soulProjectileProcType;
+
+        public static GameObject soulProjectile;
 
         public static BuffDef spiritBuff;
         public override string ItemName => "Relic of Soul";
 
         public override string ItemLangTokenName => "SOULANOMALY";
 
-        public override string ItemPickupDesc => "Move and attack faster at low health.";
+        public override string ItemPickupDesc => "Fire a soul projectile that triggers on-kill effects.";
 
-        public override string ItemFullDescription => $"Gain {Tools.ConvertDecimal(baseMoveSpeedAdd)} movement speed. " +
-            $"For every missing <style=cIsHealth>{100 / (float)SoulAnomalyBehavior.maxBuffCount}% of max health</style>, " +
-            $"increase movement speed by <style=cIsDamage>{Tools.ConvertDecimal(maxMoveMultAdd / SoulAnomalyBehavior.maxBuffCount)}</style> " +
-            $"<style=cStack>(+{Tools.ConvertDecimal(maxMoveMultAdd / SoulAnomalyBehavior.maxBuffCount)} per stack)</style> " +
-            $"and attack speed by <style=cIsDamage>{Tools.ConvertDecimal(maxAttackMultAdd / SoulAnomalyBehavior.maxBuffCount)}</style> " +
-            $"<style=cStack>(+{Tools.ConvertDecimal(maxAttackMultAdd / SoulAnomalyBehavior.maxBuffCount)} per stack)</style>.";
+        public override string ItemFullDescription => $"" +
+            $"{DamageColor(procChanceMin + "%")} chance on hit to " +
+            $"release a screaming soul as a projectile, dealing " +
+            $"{DamageColor(soulProjectileDamageCoefficient.AsPercent() + " BASE damage")} and " +
+            $"{UtilityColor("force-triggering")} all {UtilityColor("on-kill effects")} upon impact. " +
+            $"Every {DamageColor(1f.AsPercent())} attack damage dealt increases activation chance " +
+            $"by {DamageColor(procChanceBase + "%")} {StackText($"+{procChanceStack}%")}.";
+            //$"Gain {Tools.ConvertDecimal(baseMoveSpeedAdd)} movement speed. " +
+            //$"For every missing <style=cIsHealth>{100 / (float)SoulAnomalyBehavior.maxBuffCount}% of max health</style>, " +
+            //$"increase movement speed by <style=cIsDamage>{Tools.ConvertDecimal(maxMoveMultAdd / SoulAnomalyBehavior.maxBuffCount)}</style> " +
+            //$"<style=cStack>(+{Tools.ConvertDecimal(maxMoveMultAdd / SoulAnomalyBehavior.maxBuffCount)} per stack)</style> " +
+            //$"and attack speed by <style=cIsDamage>{Tools.ConvertDecimal(maxAttackMultAdd / SoulAnomalyBehavior.maxBuffCount)}</style> " +
+            //$"<style=cStack>(+{Tools.ConvertDecimal(maxAttackMultAdd / SoulAnomalyBehavior.maxBuffCount)} per stack)</style>.";
 
         public override string ItemLore => "";
 
@@ -58,12 +80,81 @@ namespace NewMoon.Items
         {
             return null;
         }
+        public override void Init()
+        {
+            soulProjectileProcType = ReserveProcType();
+            spiritBuff = Content.CreateAndAddBuff(
+                "bdSpiritSpeed",
+                Addressables.LoadAssetAsync<Sprite>("RoR2/Base/Common/texMovespeedBuffIcon.tif").WaitForCompletion(),
+                Color.cyan,
+                true, false
+                );
+
+            base.Init();
+
+            NewMoonPlugin.LoadAsync<GameObject>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_LunarWisp.LunarWispTrackingBomb_prefab, CreateSoulProjectile);
+        }
+
+        private void CreateSoulProjectile(GameObject lunarWispTrackingBomb)
+        {
+            soulProjectile = lunarWispTrackingBomb.InstantiateClone("SoulRelicProjectile", true);
+
+            HealthComponent hc;
+            if(soulProjectile.TryGetComponent(out hc))
+            {
+                hc.globalDeathEventChanceCoefficient = 0;
+            }
+
+            ProjectileGrantOnKillOnDestroy onKillTrigger = soulProjectile.AddComponent<ProjectileGrantOnKillOnDestroy>();
+            onKillTrigger.healthComponent = hc;
+
+            Content.AddProjectilePrefab(soulProjectile);
+        }
 
         public override void Hooks()
         {
-            On.RoR2.CharacterBody.OnInventoryChanged += AddItemBehavior;
-            GetStatCoefficients += SpiritSpeedBoosts;
+            GetHitBehavior += FireSoulProjectileOnHit;
+            //On.RoR2.CharacterBody.OnInventoryChanged += AddItemBehavior;
+            //GetStatCoefficients += SpiritSpeedBoosts;
         }
+
+        private void FireSoulProjectileOnHit(CharacterBody attackerBody, DamageInfo damageInfo, CharacterBody victimBody)
+        {
+            if (damageInfo.procChainMask.HasModdedProc(soulProjectileProcType))
+                return;
+            bool damageSourcedFromSkill = damageInfo.damageType.IsDamageSourceSkillBased || damageInfo.damageType.damageSource == DamageSource.Equipment;
+            if (damageSourcedFromSkill == false)
+                return;
+
+            int relicCt = GetCount(attackerBody);
+            if (relicCt <= 0)
+                return;
+
+            float damageCoefficient = damageInfo.damage /= attackerBody.damage;
+            float procRate = NewMoonPlugin.GetProcRate(damageInfo);//damageInfo.procCoefficient;
+
+            float procChance = Util.ConvertAmplificationPercentageIntoReductionPercentage((procChanceMin + GetStackValue(procChanceBase, procChanceStack, relicCt) * damageCoefficient) * procRate);
+            if(Util.CheckRoll(procChance, attackerBody.master))
+            {
+                Ray aimRay = attackerBody.inputBank.GetAimRay();
+                FireProjectileInfo fpi = new FireProjectileInfo
+                {
+                    projectilePrefab = soulProjectile,
+                    crit = damageInfo.crit,
+                    damage = attackerBody.damage * soulProjectileDamageCoefficient,
+                    damageColorIndex = DamageColorIndex.Item,
+                    force = SeekingBomb.bombForce,
+                    owner = attackerBody.gameObject,
+                    position = aimRay.origin,
+                    rotation = Util.QuaternionSafeLookRotation((victimBody.corePosition - attackerBody.corePosition).normalized)
+                };
+                ProcChainMask mask = damageInfo.procChainMask;
+                mask.AddModdedProc(soulProjectileProcType);
+                fpi.procChainMask = mask;
+                ProjectileManager.instance.FireProjectile(fpi);
+            }
+        }
+
         public override void PostInit()
         {
             base.PostInit();
@@ -125,17 +216,6 @@ namespace NewMoon.Items
                     self.AddItemBehavior<SoulAnomalyBehavior>(GetCount(self));
                 }
             }
-        }
-        public override void Init()
-        {
-            spiritBuff = Content.CreateAndAddBuff(
-                "bdSpiritSpeed",
-                Addressables.LoadAssetAsync<Sprite>("RoR2/Base/Common/texMovespeedBuffIcon.tif").WaitForCompletion(),
-                Color.cyan,
-                true, false
-                );
-
-            base.Init();
         }
     }
     public class SoulAnomalyBehavior : CharacterBody.ItemBehavior
