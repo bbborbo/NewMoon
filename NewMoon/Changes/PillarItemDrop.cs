@@ -7,11 +7,17 @@ using UnityEngine.Events;
 using UnityEngine.Networking;
 using UnityEngine.AddressableAssets;
 using NewMoon.Components;
+using System;
+using EntityStates.Missions.Moon;
 
 namespace NewMoon
 {
 	public partial class NewMoonPlugin
 	{
+		public static int requiredPillarCt = 2;
+		public static int maxPillarCt = 4;
+		//public static int pillarsToSpawn = 6;
+
 		public static float pillarDropOffset = 2.5f;
 		public static float pillarDropForce = 20f;
 		public static int baseRewardCount = 1;
@@ -21,7 +27,16 @@ namespace NewMoon
 		{
 			//On.RoR2.MoonBatteryMissionController.OnBatteryCharged += PillarsDropItems;
 			On.RoR2.MoonBatteryMissionController.Awake += ReduceRequiredPillars;
+			On.RoR2.MoonBatteryMissionController.OnBatteryCharged += ChangePillarRequirement;
 
+			NewMoonPlugin.LoadAsync<GameObject>(RoR2BepInExPack.GameAssetPaths.RoR2_Base_moon2.MoonBatteryBlood_prefab, 
+				(ctx) => AddPillarItemDrop(ctx, PillarItemDropper.PillarType.Blood));
+			NewMoonPlugin.LoadAsync<GameObject>(RoR2BepInExPack.GameAssetPaths.RoR2_Base_moon2.MoonBatteryDesign_prefab, 
+				(ctx) => AddPillarItemDrop(ctx, PillarItemDropper.PillarType.Blood));
+			NewMoonPlugin.LoadAsync<GameObject>(RoR2BepInExPack.GameAssetPaths.RoR2_Base_moon2.MoonBatteryMass_prefab, 
+				(ctx) => AddPillarItemDrop(ctx, PillarItemDropper.PillarType.Blood));
+			NewMoonPlugin.LoadAsync<GameObject>(RoR2BepInExPack.GameAssetPaths.RoR2_Base_moon2.MoonBatterySoul_prefab, 
+				(ctx) => AddPillarItemDrop(ctx, PillarItemDropper.PillarType.Blood));
 			Addressables.LoadAssetAsync<GameObject>(RoR2BepInExPack.GameAssetPaths.RoR2_Base_moon2.MoonBatteryBlood_prefab).Completed 
 				+= (ctx) => AddPillarItemDrop(ctx.Result, PillarItemDropper.PillarType.Blood);
 			Addressables.LoadAssetAsync<GameObject>(RoR2BepInExPack.GameAssetPaths.RoR2_Base_moon2.MoonBatteryDesign_prefab).Completed 
@@ -37,13 +52,52 @@ namespace NewMoon
 			}
 		}
 
-		private void ReduceRequiredPillars(On.RoR2.MoonBatteryMissionController.orig_Awake orig, MoonBatteryMissionController self)
+        private void ChangePillarRequirement(On.RoR2.MoonBatteryMissionController.orig_OnBatteryCharged orig, MoonBatteryMissionController self, HoldoutZoneController holdoutZone)
+		{
+			self.Network_numChargedBatteries = self._numChargedBatteries + 1;
+			if (!NetworkServer.active)
+				return;
+
+			if (self._numChargedBatteries >= requiredPillarCt)
+			{
+				for (int k = 0; k < self.elevatorStateMachines.Length; k++)
+				{
+					self.elevatorStateMachines[k].SetNextState(new InactiveToReady());
+				}
+			}
+			else
+				return;
+
+			if (self._numChargedBatteries >= maxPillarCt)
+			{
+				for (int i = 0; i < self.batteryHoldoutZones.Length; i++)
+				{
+					if (self.batteryHoldoutZones[i].enabled)
+					{
+						self.batteryHoldoutZones[i].FullyChargeHoldoutZone();
+						self.batteryHoldoutZones[i].onCharged.RemoveListener(new UnityAction<HoldoutZoneController>(self.OnBatteryCharged));
+					}
+				}
+				self.batteryHoldoutZones = new HoldoutZoneController[0];
+				for (int j = 0; j < self.batteryStateMachines.Length; j++)
+				{
+					if (!(self.batteryStateMachines[j].state is MoonBatteryComplete))
+					{
+						self.batteryStateMachines[j].SetNextState(new MoonBatteryDisabled());
+					}
+				}
+			}
+		}
+
+        private void ReduceRequiredPillars(On.RoR2.MoonBatteryMissionController.orig_Awake orig, MoonBatteryMissionController self)
 		{
 			orig(self);
 			self._numRequiredBatteries = 2;
 			foreach(GameObject pillarObject in self.moonBatteries)
 			{
 				PillarItemDropper dropper = pillarObject.GetComponent<PillarItemDropper>();
+
+				//backup pillar type determination
                 if (!dropper)
 				{
 					dropper = pillarObject.AddComponent<PillarItemDropper>();
