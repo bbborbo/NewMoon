@@ -17,6 +17,7 @@ using UnityEngine.ResourceManagement.AsyncOperations;
 using NewMoon.Modules;
 using NewMoon.Items;
 using NewMoon.Artifacts;
+using ProcSolver;
 
 #pragma warning disable CS0618 // Type or member is obsolete
 [assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
@@ -55,6 +56,22 @@ namespace NewMoon
         #region config
         public static bool DoPillarItemDrop = false;
         #endregion
+        #region compat
+        public static bool procSolverInstalled => Tools.isLoaded(ProcSolverPlugin.guid);
+        public static float GetProcRate(DamageInfo damageInfo)
+        {
+            if (damageInfo.procCoefficient <= 0 || !procSolverInstalled)
+                return damageInfo.procCoefficient;
+
+            return _GetProcRate(damageInfo);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
+        private static float _GetProcRate(DamageInfo damageInfo)
+        {
+            return ProcSolverPlugin.GetProcRateMod(damageInfo);
+        }
+    #endregion
         void Awake()
         {
             instance = this;
