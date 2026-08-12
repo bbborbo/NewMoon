@@ -13,6 +13,12 @@ using NewMoon.Modules;
 using NewMoon;
 using System.Linq;
 using static NewMoon.Modules.Language.Styling;
+using static MoreStats.OnHit;
+using static R2API.RecalculateStatsAPI;
+using static RoR2.Items.BaseItemBodyBehavior;
+using RoR2.Items;
+
+[assembly: HG.Reflection.SearchableAttribute.OptIn]
 
 namespace NewMoon.Items
 {
@@ -35,20 +41,42 @@ namespace NewMoon.Items
         public static int onKillForceTriggersBase = 4;
         [AutoConfig("On-Kill Force Triggers Stack", 2)]
         public static int onKillForceTriggersStack = 2;
+
+		public static GameObject radiusIndicatorPrefab;
+
+		[AutoConfig("Life Steal Radius Base", 16f)]
+		public static float lifeStealRadiusBase = 16f;
+		[AutoConfig("Life Steal Radius Stack", 0)]
+		public static float lifeStealRadiusStack = 0f;
+		[AutoConfig("Life Steal Fraction Base", 0.05f)]
+		public static float lifeStealAmountBase = 0.05f;
+		[AutoConfig("Life Steal Fraction Stack", 0.025f)]
+		public static float lifeStealAmountStack = 0.025f;
+		[AutoConfig("Bleed Chance Base", 10f)]
+		public static float bleedChanceBase = 10f;
+		[AutoConfig("Bleed Chance Stack", 0f)]
+		public static float bleedChanceStack = 0f;
+		[AutoConfig("Bleed Damage Life Steal Multiplier", 0.5f)]
+		public static float bleedEffectiveProcCoeff = 0.5f;
 		#endregion
 		public static BuffDef hiddenForceTriggerCount;
         public override string ItemName => "Relic of Blood";
 
         public override string ItemLangTokenName => "BLOODANOMALY";
 
-        public override string ItemPickupDesc => "Heal on kill. Damaging powerful enemies force-triggers on-kill effects.";
+        public override string ItemPickupDesc => "Gain life steal against nearby enemies. Bleeding enemies heal you for more.";
 
-        public override string ItemFullDescription => 
-			$"On killing an enemy, immediately heal for " +
-			$"{HealingColor(Tools.ConvertDecimal(healFractionOnKillBase))} {StackText($"+{Tools.ConvertDecimal(healFractionOnKillStack)}")} " +
-			$"of {HealingColor("maximum health")}. Dealing damage to {UtilityColor("Champions")} will " +
-			$"force-trigger {DamageColor("On-Kill")} effects up to " +
-			$"{DamageColor($"{onKillForceTriggersBase}")} {StackText($"+{onKillForceTriggersStack}")} times.";
+		public override string ItemFullDescription =>
+			$"{DamageColor(bleedChanceBase + "%")} chance to {DamageColor("bleed")} an enemy. " +
+			$"{HealingColor("Heal")} for {HealingColor(lifeStealAmountBase.AsPercent())} " +
+			$"{StackText(lifeStealAmountStack.AsPercent())} of {DamageColor("total damage")} dealt " +
+			$"against enemies within {DamageColor($"{lifeStealRadiusBase}m")}. " +
+			$"Damage dealt by {DamageColor("bleed status")} heals for {DamageColor($"+{bleedEffectiveProcCoeff.AsPercent()}")} more.";
+			//$"On killing an enemy, immediately heal for " +
+			//$"{HealingColor(Tools.ConvertDecimal(healFractionOnKillBase))} {StackText($"+{Tools.ConvertDecimal(healFractionOnKillStack)}")} " +
+			//$"of {HealingColor("maximum health")}. Dealing damage to {UtilityColor("Champions")} will " +
+			//$"force-trigger {DamageColor("On-Kill")} effects up to " +
+			//$"{DamageColor($"{onKillForceTriggersBase}")} {StackText($"+{onKillForceTriggersStack}")} times.";
 
         public override string ItemLore => "";
 
@@ -70,8 +98,33 @@ namespace NewMoon.Items
 				"bdHiddenRelicForceTriggerCount",
 				null, Color.black, true, false);
 			hiddenForceTriggerCount.isHidden = true;
+
+			NewMoonPlugin.LoadAsync<GameObject>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_NearbyDamageBonus.NearbyDamageBonusIndicator_prefab, CreateRangeIndicator);
+
 			base.Init();
 		}
+
+        private void CreateRangeIndicator(GameObject obj)
+        {
+			radiusIndicatorPrefab = obj.InstantiateClone("BloodAnomalyRangeIndicator", true);
+
+			Transform radiusSpherical = radiusIndicatorPrefab.transform.GetChild(1);
+            if (radiusSpherical)
+            {
+				radiusSpherical.transform.localScale = Vector3.one * lifeStealRadiusBase * 2;
+
+				if(radiusSpherical.gameObject.TryGetComponent(out MeshRenderer meshRenderer))
+                {
+					Material mat = UnityEngine.Object.Instantiate(meshRenderer.material);
+					mat.SetColor("_TintColor", new Color32(255,168,36,139));
+
+					meshRenderer.material = mat;
+                }
+            }
+
+			Modules.Content.AddNetworkedObjectPrefab(radiusIndicatorPrefab);
+        }
+
         public override void PostInit()
         {
             base.PostInit();
@@ -109,8 +162,69 @@ namespace NewMoon.Items
 
         public override void Hooks()
         {
-			GlobalEventManager.onServerDamageDealt += BloodRelicOnDamageDealt;
-            GlobalEventManager.onCharacterDeathGlobal += BloodRelicOnKill;
+			//GlobalEventManager.onServerDamageDealt += BloodRelicOnDamageDealt;
+			//GlobalEventManager.onCharacterDeathGlobal += BloodRelicOnKill;
+			GlobalEventManager.onServerDamageDealt += BloodRelicLifeSteal;
+			//GetHitBehavior += BloodRelicNearbyLifeSteal;
+			GetStatCoefficients += BloodRelicBleed;
+        }
+
+        private void BloodRelicBleed(CharacterBody sender, StatHookEventArgs args)
+		{
+			int relicCount = GetCount(sender);
+			if (relicCount <= 0)
+				return;
+			args.bleedChanceAdd += GetStackValue(bleedChanceBase, bleedChanceStack, relicCount);
+		}
+
+        private void BloodRelicLifeSteal(DamageReport damageReport)
+		{
+			CharacterBody attackerBody = damageReport.attackerBody;
+			CharacterBody victimBody = damageReport.victimBody;
+			DamageInfo damageInfo = damageReport.damageInfo;
+			if (attackerBody == null || victimBody == null || damageInfo == null)
+				return;
+
+			float effectiveProcCoefficient = (damageInfo.dotIndex == DotController.DotIndex.Bleed) ? bleedEffectiveProcCoeff: damageInfo.procCoefficient;
+			if (effectiveProcCoefficient <= 0)
+				return;
+
+			int relicCount = GetCount(attackerBody);
+			if (relicCount <= 0)
+				return;
+
+			float distanceSqr = (attackerBody.corePosition - victimBody.corePosition).sqrMagnitude;
+			float maxDistanceSqr = Mathf.Pow(GetStackValue(lifeStealRadiusBase, lifeStealRadiusStack, relicCount), 2);
+			if (distanceSqr > maxDistanceSqr)
+				return;
+
+			float lifeStealAmt = GetStackValue(lifeStealAmountBase, lifeStealAmountStack, relicCount);
+			HealOrb healOrb = new HealOrb();
+			healOrb.healValue = damageInfo.damage * lifeStealAmt * effectiveProcCoefficient;
+			healOrb.origin = damageInfo.position;
+			healOrb.target = attackerBody.mainHurtBox;
+			healOrb.overrideDuration = 0.1f;
+			OrbManager.instance.AddOrb(healOrb);
+		}
+
+        private void BloodRelicNearbyLifeSteal(CharacterBody attackerBody, DamageInfo damageInfo, CharacterBody victimBody)
+        {
+			int relicCount = GetCount(attackerBody);
+			if (relicCount <= 0)
+				return;
+
+			float distanceSqr = (attackerBody.corePosition - victimBody.corePosition).sqrMagnitude;
+			float maxDistanceSqr = GetStackValue(lifeStealRadiusBase, lifeStealRadiusStack, relicCount);
+			if (distanceSqr > maxDistanceSqr)
+				return;
+
+			float lifeStealAmt = GetStackValue(lifeStealAmountBase, lifeStealAmountStack, relicCount);
+			HealOrb healOrb = new HealOrb();
+			healOrb.healValue = lifeStealAmt;
+			healOrb.origin = damageInfo.position;
+			healOrb.target = attackerBody.mainHurtBox;
+			healOrb.overrideDuration = 0.1f;
+			OrbManager.instance.AddOrb(healOrb);
         }
 
         private void BloodRelicOnDamageDealt(DamageReport damageReport)
@@ -180,5 +294,43 @@ namespace NewMoon.Items
 				GlobalEventManager.instance.OnCharacterDeath(damageReport);
 			}
 		}
-    }
+	}
+	public class BloodAnomalyBehavior : BaseItemBodyBehavior
+	{
+		[BaseItemBodyBehavior.ItemDefAssociationAttribute(useOnServer = true, useOnClient = false)]
+		private static ItemDef GetItemDef() => BloodAnomaly.instance?.ItemsDef ?? null;
+		private void OnEnable()
+		{
+			this.indicatorEnabled = true;
+		}
+
+		private void OnDisable()
+		{
+			this.indicatorEnabled = false;
+		}
+		private bool indicatorEnabled
+		{
+			get
+			{
+				return this.nearbyDamageBonusIndicator;
+			}
+			set
+			{
+				if (this.indicatorEnabled == value)
+				{
+					return;
+				}
+				if (value)
+				{
+					this.nearbyDamageBonusIndicator = UnityEngine.Object.Instantiate<GameObject>(BloodAnomaly.radiusIndicatorPrefab, base.body.corePosition, Quaternion.identity);
+					this.nearbyDamageBonusIndicator.GetComponent<NetworkedBodyAttachment>().AttachToGameObjectAndSpawn(base.gameObject, null);
+					return;
+				}
+				UnityEngine.Object.Destroy(this.nearbyDamageBonusIndicator);
+				this.nearbyDamageBonusIndicator = null;
+			}
+		}
+
+		private GameObject nearbyDamageBonusIndicator;
+	}
 }
