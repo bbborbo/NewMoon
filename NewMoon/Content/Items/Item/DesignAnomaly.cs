@@ -43,12 +43,12 @@ namespace NewMoon.Items
 
         public override string ItemLangTokenName => "DESIGNANOMALY";
 
-        public override string ItemPickupDesc => "Hold JUMP while falling to hover.";
+        public override string ItemPickupDesc => "Double jump. Hold JUMP while falling to hover.";
 
-        public override string ItemFullDescription => $"While airborne, holding JUMP allows you to float in the air with " +
+        public override string ItemFullDescription => $"Gain an additional air jump. While airborne, holding JUMP allows you to float in the air with " +
             $"{UtilityColor($"+{movementSpeedWhileHoveringBase.AsPercent()}")} movement speed {StackText($"+{movementSpeedWhileHoveringStack.AsPercent()}")} " +
             $"for up to {UtilityColor(((float)maxHoverChargeBase / 60f).ToString())} seconds {StackText("+" + ((float)maxHoverChargeStack / 60f).ToString())}. " +
-            $"{StackColor($"Recharges {((float)rechargePerFrameStack / (float)rechargePerFrameBase).AsPercent()} faster per stack.")}";
+            $"{StackColor($"(Recharges {((float)rechargePerFrameStack / (float)rechargePerFrameBase).AsPercent()} faster per stack)")}";
 
         public override string ItemLore => "";
 
@@ -130,10 +130,14 @@ namespace NewMoon.Items
 
         private void HoverMoveSpeed(CharacterBody sender, StatHookEventArgs args)
         {
-            if (sender.HasBuff(HoverActiveBuff))
+            int ct = GetCount(sender);
+            if (ct > 0)
             {
-                int ct = GetCount(sender);
-                args.moveSpeedMultAdd += movementSpeedWhileHoveringBase + movementSpeedWhileHoveringStack * (ct - 1);
+                args.jumpCountAdd += 1;
+                if (sender.HasBuff(HoverActiveBuff))
+                {
+                    args.moveSpeedMultAdd += movementSpeedWhileHoveringBase + movementSpeedWhileHoveringStack * (ct - 1);
+                }
             }
         }
 
