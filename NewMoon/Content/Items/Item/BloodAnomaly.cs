@@ -144,19 +144,21 @@ namespace NewMoon.Items
 			focon.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_FocusConvergence.FocusConvergence_asset).WaitForCompletion();
 			focon.type = IngredientTypeIndex.AssetReference;
 
-			RecipeIngredient anyQuest = new RecipeIngredient();
-			anyQuest.requiredTags = new ItemTag[] { ItemTag.ObjectiveRelated };
-			anyQuest.forbiddenTags = new ItemTag[] { ItemTag.Count };
-			anyQuest.type = IngredientTypeIndex.AnyItem;
-			anyQuest.itemTier = ItemTier.Boss;
+			RecipeIngredient[] anyQuest = Tools.GetAllBossKeyIngredients();
+			//	new RecipeIngredient();
+			//anyQuest.requiredTags = new ItemTag[] { ItemTag.PowerShape };
+			//anyQuest.forbiddenTags = new ItemTag[] { ItemTag.Count };
+			//anyQuest.type = IngredientTypeIndex.AnyItem;
+			//anyQuest.itemTier = ItemTier.Boss;
 			RecipeIngredient[] anyWithTags = Tools.GetAllIngredientsWithTags(
 				required: new ItemTag[] { ItemTag.OnKillEffect },
 				forbidden: new ItemTag[] { },
-				maxTier: 3
+				maxTier: 3,
+				minTier: 1
 				);
 
 			craftable.recipes = new Recipe[0];
-			craftable.AddAllRecipePermutations(new RecipeIngredient[] { corpsebloom, gesture, focon }, anyWithTags.Append(anyQuest).ToArray());
+			craftable.AddAllRecipePermutations(anyWithTags.Concat(new RecipeIngredient[] { corpsebloom, gesture, focon }).ToArray(), anyQuest);
 			Content.AddCraftableDef(craftable);
 		}
 

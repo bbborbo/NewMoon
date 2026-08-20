@@ -106,11 +106,12 @@ namespace NewMoon.Items
             purity.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_LunarBadLuck.LunarBadLuck_asset).WaitForCompletion();
             purity.type = IngredientTypeIndex.AssetReference;
 
-            RecipeIngredient anyQuest = new RecipeIngredient();
-            anyQuest.requiredTags = new ItemTag[] { ItemTag.ObjectiveRelated };
-            anyQuest.forbiddenTags = new ItemTag[] { ItemTag.Count };
-            anyQuest.type = IngredientTypeIndex.AnyItem;
-            anyQuest.itemTier = ItemTier.Boss;
+            RecipeIngredient[] anyQuest = Tools.GetAllBossKeyIngredients();
+            //    new RecipeIngredient();
+            //anyQuest.requiredTags = new ItemTag[] { ItemTag.ObjectiveRelated };
+            //anyQuest.forbiddenTags = new ItemTag[] { ItemTag.Count };
+            //anyQuest.type = IngredientTypeIndex.AnyItem;
+            //anyQuest.itemTier = ItemTier.Boss;
             RecipeIngredient[] anyWithTags = Tools.GetAllIngredientsWithTags(
                 required: new ItemTag[] { ItemTag.MobilityRelated },
                 forbidden: new ItemTag[] { },
@@ -118,7 +119,7 @@ namespace NewMoon.Items
                 );
 
             craftable.recipes = new Recipe[0];
-            craftable.AddAllRecipePermutations(new RecipeIngredient[] { gouge, trans, purity }, anyWithTags.Append(anyQuest).ToArray());
+            craftable.AddAllRecipePermutations(anyWithTags.Concat(new RecipeIngredient[] { gouge, trans, purity }).ToArray(), anyQuest); ;
             Content.AddCraftableDef(craftable);
         }
 

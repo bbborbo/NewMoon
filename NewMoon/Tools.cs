@@ -383,11 +383,13 @@ namespace NewMoon
             return count;
         }
 
-        public static RecipeIngredient[] GetAllIngredientsWithTags(ItemTag[] required, ItemTag[] forbidden, int maxTier = 3)
+        public static RecipeIngredient[] GetAllBossKeyIngredients() => GetAllIngredientsWithTags(new ItemTag[] { ItemTag.PowerShape }, new ItemTag[] { }, 4, 4);
+
+        public static RecipeIngredient[] GetAllIngredientsWithTags(ItemTag[] required, ItemTag[] forbidden, int minTier = 1, int maxTier = 3)
         {
             List<RecipeIngredient> ingredients = new List<RecipeIngredient>();
 
-            for(int i = 1; i <= maxTier; i++)
+            for(int i = minTier; i <= maxTier; i++)
             {
                 ItemTier tier = ItemTier.Tier1;
                 switch (i)

@@ -90,11 +90,12 @@ namespace NewMoon.Items
             meteor.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_Meteor.Meteor_asset).WaitForCompletion();
             meteor.type = IngredientTypeIndex.AssetReference;
 
-            RecipeIngredient anyQuest = new RecipeIngredient();
-            anyQuest.requiredTags = new ItemTag[] { ItemTag.ObjectiveRelated };
-            anyQuest.forbiddenTags = new ItemTag[] { ItemTag.Count };
-            anyQuest.type = IngredientTypeIndex.AnyItem;
-            anyQuest.itemTier = ItemTier.Boss;
+            RecipeIngredient[] anyQuest = Tools.GetAllBossKeyIngredients();
+            //    new RecipeIngredient();
+            //anyQuest.requiredTags = new ItemTag[] { ItemTag.ObjectiveRelated };
+            //anyQuest.forbiddenTags = new ItemTag[] { ItemTag.Count };
+            //anyQuest.type = IngredientTypeIndex.AnyItem;
+            //anyQuest.itemTier = ItemTier.Boss;
             RecipeIngredient[] anyWithTags = Tools.GetAllIngredientsWithTags(
                 required: new ItemTag[] { ItemTag.FoodRelated },
                 forbidden: new ItemTag[] { },
@@ -102,7 +103,7 @@ namespace NewMoon.Items
                 );
 
             craftable.recipes = new Recipe[0];
-            craftable.AddAllRecipePermutations(new RecipeIngredient[] { neutronium, rachis, stoneflux/*, meteor*/ }, anyWithTags.Append(anyQuest).ToArray());
+            craftable.AddAllRecipePermutations(anyWithTags.Concat(new RecipeIngredient[] { neutronium, rachis, stoneflux/*, meteor*/ }).ToArray(), anyQuest);
             Content.AddCraftableDef(craftable);
         }
 
