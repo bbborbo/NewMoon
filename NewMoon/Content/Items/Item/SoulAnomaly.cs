@@ -109,6 +109,12 @@ namespace NewMoon.Items
             ProjectileGrantOnKillOnDestroy onKillTrigger = soulProjectile.AddComponent<ProjectileGrantOnKillOnDestroy>();
             onKillTrigger.healthComponent = hc;
 
+            if(soulProjectile.TryGetComponent(out ProjectileDirectionalTargetFinder pdtf))
+            {
+                pdtf.lookRange = 100f;
+                pdtf.lookCone = 35f;
+            }
+
             Content.AddProjectilePrefab(soulProjectile);
         }
 
@@ -145,7 +151,7 @@ namespace NewMoon.Items
                     damage = attackerBody.damage * soulProjectileDamageCoefficient,
                     damageTypeOverride = damageInfo.damageType,
                     damageColorIndex = DamageColorIndex.Item,
-                    force = SeekingBomb.bombForce,
+                    force = 0,
                     owner = attackerBody.gameObject,
                     position = aimRay.origin,
                     rotation = Util.QuaternionSafeLookRotation((victimBody.corePosition - attackerBody.corePosition).normalized)
