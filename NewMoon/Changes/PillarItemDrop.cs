@@ -28,6 +28,7 @@ namespace NewMoon
 			//On.RoR2.MoonBatteryMissionController.OnBatteryCharged += PillarsDropItems;
 			On.RoR2.MoonBatteryMissionController.Awake += ReduceRequiredPillars;
 			On.RoR2.MoonBatteryMissionController.OnBatteryCharged += ChangePillarRequirement;
+			On.EntityStates.Missions.GeodeSecretMission.GeodeSecretMissionRewardState.DropRewards += ReplaceGeodeSecretMissionRewards;
 
 			NewMoonPlugin.LoadAsync<GameObject>(RoR2BepInExPack.GameAssetPaths.RoR2_Base_moon2.MoonBatteryBlood_prefab, 
 				(ctx) => AddPillarItemDrop(ctx, PillarItemDropper.PillarType.Blood));
@@ -51,6 +52,51 @@ namespace NewMoon
 				dropper.pillarType = pillarType;
 			}
 		}
+
+        #region meridian
+        private void ReplaceGeodeSecretMissionRewards(On.EntityStates.Missions.GeodeSecretMission.GeodeSecretMissionRewardState.orig_DropRewards orig, EntityStates.Missions.GeodeSecretMission.GeodeSecretMissionRewardState self)
+		{
+			int participatingPlayerCount = Run.instance.participatingPlayerCount;
+			if (participatingPlayerCount > 0 && self.gameObject && self.geodeSecretMissionController.rewardDropTable)
+			{
+				int num = self.geodeSecretMissionController.numberOfRewardsSpawned;
+				if (self.geodeSecretMissionController.increaseRewardPerPlayer)
+				{
+					num *= participatingPlayerCount;
+				}
+				float angle = 360f / (float)num;
+				Vector3 vector = Quaternion.AngleAxis((float)UnityEngine.Random.Range(0, 360), Vector3.up) * (Vector3.up * 40f + Vector3.forward * 5f);
+				Quaternion rotation = Quaternion.AngleAxis(angle, Vector3.up);
+				Vector3 position = self.geodeSecretMissionController.rewardSpawnLocation.transform.position;
+				int i = 0;
+				while (i < num)
+				{
+					PickupDropletController.CreatePickupDroplet(new GenericPickupController.CreatePickupInfo
+					{
+						pickupIndex = PickupCatalog.FindPickupIndex(self.geodeSecretMissionController.rewardDisplayTier),
+						pickerOptions = new PickupPickerController.Option[4] { 
+							TPkp(MassAnomaly.instance.ItemsDef), 
+							TPkp(DesignAnomaly.instance.ItemsDef), 
+							TPkp(BloodAnomaly.instance.ItemsDef),
+							TPkp(SoulAnomaly.instance.ItemsDef) 
+						},
+						rotation = Quaternion.identity,
+						prefabOverride = self.geodeSecretMissionController.rewardPrefab
+					}, position, vector);
+					i++;
+					vector = rotation * vector;
+				}
+			}
+			PickupPickerController.Option TPkp(ItemDef itemDef)
+            {
+				return new PickupPickerController.Option
+				{
+					available = true,
+					pickup = new UniquePickup { pickupIndex = PickupCatalog.itemIndexToPickupIndex[(int)itemDef.itemIndex] }
+				};
+			}
+		}
+        #endregion
 
         private void ChangePillarRequirement(On.RoR2.MoonBatteryMissionController.orig_OnBatteryCharged orig, MoonBatteryMissionController self, HoldoutZoneController holdoutZone)
 		{
