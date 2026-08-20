@@ -85,7 +85,7 @@ namespace NewMoon.Items
 		public override GameObject ItemModel => LoadDropPrefab("PickupBloodAnomaly");
 
 		public override Sprite ItemIcon => LoadItemIcon("texIconBloodAnomaly");
-		public override ItemTag[] ItemTags => new ItemTag[] { ItemTag.BrotherBlacklist , ItemTag.WorldUnique, ItemTag.CannotSteal, ItemTag.AIBlacklist, ItemTag.OnKillEffect };
+		public override ItemTag[] ItemTags => new ItemTag[] { ItemTag.BrotherBlacklist , ItemTag.WorldUnique, ItemTag.CannotSteal, ItemTag.AIBlacklist, ItemTag.OnKillEffect, ItemTag.ObjectiveRelated };
 
         public override ItemDisplayRuleDict CreateItemDisplayRules()
         {

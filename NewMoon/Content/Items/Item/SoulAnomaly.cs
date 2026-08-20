@@ -58,6 +58,7 @@ namespace NewMoon.Items
             $"release a screaming soul as a projectile, dealing " +
             $"{DamageColor(soulProjectileDamageCoefficient.AsPercent() + " BASE damage")} and " +
             $"{UtilityColor("force-triggering")} all {UtilityColor("on-kill effects")} upon impact. " +
+            $"Copies the source attack's damage type. " +
             $"Every {DamageColor(1f.AsPercent())} attack damage dealt increases activation chance " +
             $"by {DamageColor(procChanceBase + "%")} {StackText($"+{procChanceStack}%")}.";
             //$"Gain {Tools.ConvertDecimal(baseMoveSpeedAdd)} movement speed. " +
@@ -74,7 +75,7 @@ namespace NewMoon.Items
         public override GameObject ItemModel => LoadDropPrefab("PickupSoulAnomaly");
 
         public override Sprite ItemIcon => LoadItemIcon("texIconSoulAnomaly");
-        public override ItemTag[] ItemTags { get; } = new ItemTag[] { ItemTag.BrotherBlacklist, ItemTag.WorldUnique, ItemTag.CannotSteal };
+        public override ItemTag[] ItemTags { get; } = new ItemTag[] { ItemTag.BrotherBlacklist, ItemTag.WorldUnique, ItemTag.CannotSteal, ItemTag.ObjectiveRelated };
 
         public override ItemDisplayRuleDict CreateItemDisplayRules()
         {
@@ -142,6 +143,7 @@ namespace NewMoon.Items
                     projectilePrefab = soulProjectile,
                     crit = damageInfo.crit,
                     damage = attackerBody.damage * soulProjectileDamageCoefficient,
+                    damageTypeOverride = damageInfo.damageType,
                     damageColorIndex = DamageColorIndex.Item,
                     force = SeekingBomb.bombForce,
                     owner = attackerBody.gameObject,

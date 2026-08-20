@@ -54,7 +54,7 @@ namespace NewMoon.Items
         public override GameObject ItemModel => LoadDropPrefab("PickupMassAnomaly");
 
         public override Sprite ItemIcon => LoadItemIcon("texIconMassAnomaly");
-        public override ItemTag[] ItemTags => new ItemTag[] { ItemTag.BrotherBlacklist, ItemTag.WorldUnique, ItemTag.CannotSteal };
+        public override ItemTag[] ItemTags => new ItemTag[] { ItemTag.BrotherBlacklist, ItemTag.WorldUnique, ItemTag.CannotSteal, ItemTag.ObjectiveRelated };
 
         public override ItemDisplayRuleDict CreateItemDisplayRules()
         {
