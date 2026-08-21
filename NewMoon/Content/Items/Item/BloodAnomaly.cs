@@ -17,6 +17,7 @@ using static MoreStats.OnHit;
 using static R2API.RecalculateStatsAPI;
 using static RoR2.Items.BaseItemBodyBehavior;
 using RoR2.Items;
+using RainrotSharedUtils;
 
 [assembly: HG.Reflection.SearchableAttribute.OptIn]
 
@@ -134,32 +135,50 @@ namespace NewMoon.Items
 			craftable.pickup = this.ItemsDef;
 			craftable.itemIndex = this.ItemsDef.itemIndex;
 
-			RecipeIngredient corpsebloom = new RecipeIngredient();
-			corpsebloom.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_RepeatHeal.RepeatHeal_asset).WaitForCompletion();
-			corpsebloom.type = IngredientTypeIndex.AssetReference;
-			RecipeIngredient gesture = new RecipeIngredient();
-			gesture.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_AutoCastEquipment.AutoCastEquipment_asset).WaitForCompletion();
-			gesture.type = IngredientTypeIndex.AssetReference;
-			RecipeIngredient focon = new RecipeIngredient();
-			focon.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_FocusConvergence.FocusConvergence_asset).WaitForCompletion();
-			focon.type = IngredientTypeIndex.AssetReference;
+			List<RecipeIngredient> ingredientsL = new List<RecipeIngredient>();
+			ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_RepeatHeal.RepeatHeal_asset, "relic of blood - corpsebloom");
+			ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_GoldOnHit.GoldOnHit_asset, "relic of blood - brittle crown");
+			ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_ShieldOnly.ShieldOnly_asset, "relic of blood - transcendence");
+			ingredientsL.TryLoadAndAddIngredient<EquipmentDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_LunarPotion.LunarPotion_asset, "relic of blood - spinel tonic");
+			ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_Syringe.Syringe_asset, "relic of blood - soldiers syringe");
+			ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_BleedOnHit.BleedOnHit_asset, "relic of blood - tritip dagger");
+			ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_CritGlasses.CritGlasses_asset, "relic of blood - lensmakers glasses");
+			ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_HealOnCrit.HealOnCrit_asset, "relic of blood - harvesters scythe");
+			ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_AttackSpeedOnCrit.AttackSpeedOnCrit_asset, "relic of blood - predatory instincts");
+			ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_Thorns.Thorns_asset, "relic of blood - razorwire");
+			ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_Infusion.Infusion_asset, "relic of blood - infusion");
+			ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_DLC1_StrengthenBurn.StrengthenBurn_asset, "relic of blood - ignition tank");
+			ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_DLC2_Items_TriggerEnemyDebuffs.TriggerEnemyDebuffs_asset, "relic of blood - noxious thorn");
+			ingredientsL.TryLoadAndAddIngredient<EquipmentDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_Saw.Saw_asset, "relic of blood - sawmeranng");
+			ingredientsL.TryLoadAndAddIngredient<EquipmentDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_LifestealOnHit.LifestealOnHit_asset, "relic of blood - super massive leech");
 
-			RecipeIngredient[] anyQuest = Tools.GetAllBossKeyIngredients();
-			//	new RecipeIngredient();
+			craftable.AddAllRecipePermutations(ingredientsL.ToArray(), CraftingUtils.VanillaBossKeys);
+			Content.AddCraftableDef(craftable);
+
+			//RecipeIngredient corpsebloom = new RecipeIngredient();
+			//corpsebloom.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_RepeatHeal.RepeatHeal_asset).WaitForCompletion();
+			//corpsebloom.type = IngredientTypeIndex.AssetReference;
+			//RecipeIngredient gesture = new RecipeIngredient();
+			//gesture.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_AutoCastEquipment.AutoCastEquipment_asset).WaitForCompletion();
+			//gesture.type = IngredientTypeIndex.AssetReference;
+			//RecipeIngredient focon = new RecipeIngredient();
+			//focon.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_FocusConvergence.FocusConvergence_asset).WaitForCompletion();
+			//focon.type = IngredientTypeIndex.AssetReference;
+			//
+			//RecipeIngredient anyQuest = new RecipeIngredient();
 			//anyQuest.requiredTags = new ItemTag[] { ItemTag.PowerShape };
 			//anyQuest.forbiddenTags = new ItemTag[] { ItemTag.Count };
 			//anyQuest.type = IngredientTypeIndex.AnyItem;
 			//anyQuest.itemTier = ItemTier.Boss;
-			RecipeIngredient[] anyWithTags = Tools.GetAllIngredientsWithTags(
-				required: new ItemTag[] { ItemTag.OnKillEffect },
-				forbidden: new ItemTag[] { },
-				maxTier: 3,
-				minTier: 1
-				);
-
-			craftable.recipes = new Recipe[0];
-			craftable.AddAllRecipePermutations(anyWithTags.Concat(new RecipeIngredient[] { corpsebloom, gesture, focon }).ToArray(), anyQuest);
-			Content.AddCraftableDef(craftable);
+			//RecipeIngredient[] anyWithTags = Tools.GetAllIngredientsWithTags(
+			//	required: new ItemTag[] { ItemTag.Damage },
+			//	forbidden: new ItemTag[] { ItemTag.OnKillEffect },
+			//	maxTier: 3
+			//	);
+			//
+			//craftable.recipes = new Recipe[0];
+			//craftable.AddAllRecipePermutations(anyWithTags.Concat(new RecipeIngredient[] { corpsebloom, gesture, focon }).ToArray(), new RecipeIngredient[] { anyQuest });
+			//Content.AddCraftableDef(craftable);
 		}
 
         public override void Hooks()

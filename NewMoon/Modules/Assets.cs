@@ -1042,7 +1042,8 @@ namespace NewMoon.Modules
         }
         internal static void AddCraftableDef(CraftableDef itemDef)
         {
-            ContentPacks.craftableDefs.Add(itemDef);
+            if (itemDef.recipes.Length > 0)
+                ContentPacks.craftableDefs.Add(itemDef);
         }
         internal static void AddEliteDef(EliteDef eliteDef)
         {

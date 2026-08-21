@@ -15,6 +15,7 @@ using static RoR2.Items.BaseItemBodyBehavior;
 using RoR2.Items;
 using MoreStats;
 using EntityStates.Mage;
+using RainrotSharedUtils;
 
 [assembly: HG.Reflection.SearchableAttribute.OptIn]
 
@@ -96,31 +97,51 @@ namespace NewMoon.Items
             craftable.pickup = this.ItemsDef;
             craftable.itemIndex = this.ItemsDef.itemIndex;
 
-            RecipeIngredient gouge = new RecipeIngredient();
-            gouge.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_MonstersOnShrineUse.MonstersOnShrineUse_asset).WaitForCompletion();
-            gouge.type = IngredientTypeIndex.AssetReference;
-            RecipeIngredient trans = new RecipeIngredient();
-            trans.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_ShieldOnly.ShieldOnly_asset).WaitForCompletion();
-            trans.type = IngredientTypeIndex.AssetReference;
-            RecipeIngredient purity = new RecipeIngredient();
-            purity.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_LunarBadLuck.LunarBadLuck_asset).WaitForCompletion();
-            purity.type = IngredientTypeIndex.AssetReference;
+            List<RecipeIngredient> ingredientsL = new List<RecipeIngredient>();
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_MonstersOnShrineUse.MonstersOnShrineUse_asset, "relic of design - defiant gouge");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_RandomDamageZone.RandomDamageZone_asset, "relic of design - mercurial rachis");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_FocusConvergence.FocusConvergence_asset, "relic of design - focused convergence");
+            ingredientsL.TryLoadAndAddIngredient<EquipmentDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_LunarPotion.LunarPotion_asset, "relic of design - spinel tonic");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_Hoof.Hoof_asset, "relic of design - goat hood");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_Mushroom.Mushroom_asset, "relic of design - bustling fungus");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_SprintBonus.SprintBonus_asset, "relic of design - energy drink");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_DLC2_Items_SpeedBoostPickup.SpeedBoostPickup_asset, "relic of design - elusive antlers");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_Feather.Feather_asset, "relic of design - hopoo feather");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_SprintOutOfCombat.SprintOutOfCombat_asset, "relic of design - red whip");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_JumpBoost.JumpBoost_asset, "relic of design - wax quail");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_DLC2_Items_KnockBackHitEnemies.KnockBackHitEnemies_asset, "relic of design - breaching fin");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_DLC3_Items_JumpDamageStrike.JumpDamageStrike_asset, "relic of design - faraday spur");
+            ingredientsL.TryLoadAndAddIngredient<EquipmentDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_Jetpack.Jetpack_asset, "relic of design - milky chrysalis");
+            ingredientsL.TryLoadAndAddIngredient<EquipmentDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_FireBallDash.FireBallDash_asset, "relic of design - volcanic egg");
+            ingredientsL.TryLoadAndAddIngredient<EquipmentDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_TeamWarCry.TeamWarCry_asset, "relic of design - gorags opus");
 
-            RecipeIngredient[] anyQuest = Tools.GetAllBossKeyIngredients();
-            //    new RecipeIngredient();
+            craftable.AddAllRecipePermutations(ingredientsL.ToArray(), CraftingUtils.VanillaBossKeys);
+            Content.AddCraftableDef(craftable);
+
+            //RecipeIngredient gouge = new RecipeIngredient();
+            //gouge.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_MonstersOnShrineUse.MonstersOnShrineUse_asset).WaitForCompletion();
+            //gouge.type = IngredientTypeIndex.AssetReference;
+            //RecipeIngredient trans = new RecipeIngredient();
+            //trans.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_ShieldOnly.ShieldOnly_asset).WaitForCompletion();
+            //trans.type = IngredientTypeIndex.AssetReference;
+            //RecipeIngredient purity = new RecipeIngredient();
+            //purity.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_LunarBadLuck.LunarBadLuck_asset).WaitForCompletion();
+            //purity.type = IngredientTypeIndex.AssetReference;
+            //
+            //RecipeIngredient anyQuest = new RecipeIngredient();
             //anyQuest.requiredTags = new ItemTag[] { ItemTag.ObjectiveRelated };
             //anyQuest.forbiddenTags = new ItemTag[] { ItemTag.Count };
             //anyQuest.type = IngredientTypeIndex.AnyItem;
             //anyQuest.itemTier = ItemTier.Boss;
-            RecipeIngredient[] anyWithTags = Tools.GetAllIngredientsWithTags(
-                required: new ItemTag[] { ItemTag.MobilityRelated },
-                forbidden: new ItemTag[] { },
-                maxTier: 2
-                );
-
-            craftable.recipes = new Recipe[0];
-            craftable.AddAllRecipePermutations(anyWithTags.Concat(new RecipeIngredient[] { gouge, trans, purity }).ToArray(), anyQuest); ;
-            Content.AddCraftableDef(craftable);
+            //RecipeIngredient[] anyWithTags = Tools.GetAllIngredientsWithTags(
+            //    required: new ItemTag[] { ItemTag.MobilityRelated },
+            //    forbidden: new ItemTag[] { ItemTag.Count },
+            //    maxTier: 2
+            //    );
+            //
+            //craftable.recipes = new Recipe[0];
+            //craftable.AddAllRecipePermutations(anyWithTags.Concat(new RecipeIngredient[] { gouge, trans, purity }).ToArray(), new RecipeIngredient[] { anyQuest });
+            //Content.AddCraftableDef(craftable);
         }
 
         public override void Hooks()

@@ -14,6 +14,7 @@ using System.Linq;
 using static RoR2.Items.BaseItemBodyBehavior;
 using RoR2.Items;
 using MoreStats;
+using RainrotSharedUtils;
 
 [assembly: HG.Reflection.SearchableAttribute.OptIn]
 
@@ -77,34 +78,56 @@ namespace NewMoon.Items
             craftable.pickup = this.ItemsDef;
             craftable.itemIndex = this.ItemsDef.itemIndex;
 
-            RecipeIngredient neutronium = new RecipeIngredient();
-            neutronium.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_DLC3_Items_TransferDebuffOnHit.TransferDebuffOnHit_asset).WaitForCompletion();
-            neutronium.type = IngredientTypeIndex.AssetReference;
-            RecipeIngredient rachis = new RecipeIngredient();
-            rachis.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_RandomDamageZone.RandomDamageZone_asset).WaitForCompletion();
-            rachis.type = IngredientTypeIndex.AssetReference;
-            RecipeIngredient stoneflux = new RecipeIngredient();
-            stoneflux.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_DLC1_HalfSpeedDoubleHealth.HalfSpeedDoubleHealth_asset).WaitForCompletion();
-            stoneflux.type = IngredientTypeIndex.AssetReference;
-            RecipeIngredient meteor = new RecipeIngredient();
-            meteor.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_Meteor.Meteor_asset).WaitForCompletion();
-            meteor.type = IngredientTypeIndex.AssetReference;
+            //gesture, neturonum, stone pauldron, meteor, beads
 
-            RecipeIngredient[] anyQuest = Tools.GetAllBossKeyIngredients();
-            //    new RecipeIngredient();
+            List<RecipeIngredient> ingredientsL = new List<RecipeIngredient>();
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_AutoCastEquipment.AutoCastEquipment_asset, "relic of mass - gesture of the drowned");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_DLC3_Items_TransferDebuffOnHit.TransferDebuffOnHit_asset, "relic of mass - neutronium weight");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_LunarTrinket.LunarTrinket_asset, "relic of mass - beads of fealty");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_DLC1_HalfSpeedDoubleHealth.HalfSpeedDoubleHealth_asset, "relic of mass - stone flux pauldron");
+            ingredientsL.TryLoadAndAddIngredient<EquipmentDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_Meteor.Meteor_asset, "relic of mass - glowing meteorite");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_PersonalShield.PersonalShield_asset, "relic of mass - psg");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_WardOnLevel.WardOnLevel_asset, "relic of mass - warbanner");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_FlatHealth.FlatHealth_asset, "relic of mass - meat");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_DLC1_OutOfCombatArmor.OutOfCombatArmor_asset, "relic of mass - opal");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_ArmorPlate.ArmorPlate_asset, "relic of mass - armor plating");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_DLC2_Items_DelayedDamage.DelayedDamage_asset, "relic of mass - warped echo");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_SlowOnHit.SlowOnHit_asset, "relic of mass - chronobauble");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_DLC2_Items_ExtraShrineItem.ExtraShrineItem_asset, "relic of mass - chance doll");
+            ingredientsL.TryLoadAndAddIngredient<EquipmentDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_GainArmor.GainArmor_asset, "relic of mass - jade elephant");
+            ingredientsL.TryLoadAndAddIngredient<EquipmentDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_Blackhole.Blackhole_asset, "relic of mass - primordial cube");
+            ingredientsL.TryLoadAndAddIngredient<EquipmentDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_DLC1_GummyClone.GummyClone_asset, "relic of mass - goobo jr");
+
+            craftable.AddAllRecipePermutations(ingredientsL.ToArray(), CraftingUtils.VanillaBossKeys);
+            Content.AddCraftableDef(craftable);
+
+            //RecipeIngredient neutronium = new RecipeIngredient();
+            //neutronium.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_DLC3_Items_TransferDebuffOnHit.TransferDebuffOnHit_asset).WaitForCompletion();
+            //neutronium.type = IngredientTypeIndex.AssetReference;
+            //RecipeIngredient rachis = new RecipeIngredient();
+            //rachis.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_RandomDamageZone.RandomDamageZone_asset).WaitForCompletion();
+            //rachis.type = IngredientTypeIndex.AssetReference;
+            //RecipeIngredient stoneflux = new RecipeIngredient();
+            //stoneflux.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_DLC1_HalfSpeedDoubleHealth.HalfSpeedDoubleHealth_asset).WaitForCompletion();
+            //stoneflux.type = IngredientTypeIndex.AssetReference;
+            //RecipeIngredient meteor = new RecipeIngredient();
+            //meteor.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_Meteor.Meteor_asset).WaitForCompletion();
+            //meteor.type = IngredientTypeIndex.AssetReference;
+            //
+            //RecipeIngredient anyQuest = new RecipeIngredient();
             //anyQuest.requiredTags = new ItemTag[] { ItemTag.ObjectiveRelated };
             //anyQuest.forbiddenTags = new ItemTag[] { ItemTag.Count };
             //anyQuest.type = IngredientTypeIndex.AnyItem;
             //anyQuest.itemTier = ItemTier.Boss;
-            RecipeIngredient[] anyWithTags = Tools.GetAllIngredientsWithTags(
-                required: new ItemTag[] { ItemTag.FoodRelated },
-                forbidden: new ItemTag[] { },
-                maxTier: 1
-                );
-
-            craftable.recipes = new Recipe[0];
-            craftable.AddAllRecipePermutations(anyWithTags.Concat(new RecipeIngredient[] { neutronium, rachis, stoneflux/*, meteor*/ }).ToArray(), anyQuest);
-            Content.AddCraftableDef(craftable);
+            //RecipeIngredient[] anyWithTags = Tools.GetAllIngredientsWithTags(
+            //    required: new ItemTag[] { ItemTag.FoodRelated },
+            //    forbidden: new ItemTag[] { ItemTag.Count },
+            //    maxTier: 1
+            //    );
+            //
+            //craftable.recipes = new Recipe[0];
+            //craftable.AddAllRecipePermutations(anyWithTags.Concat(new RecipeIngredient[] { neutronium, rachis, stoneflux/*, meteor*/ }).ToArray(), new RecipeIngredient[] { anyQuest });
+            //Content.AddCraftableDef(craftable);
         }
 
         public override void Hooks()

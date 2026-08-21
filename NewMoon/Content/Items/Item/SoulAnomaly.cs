@@ -15,6 +15,7 @@ using static MoreStats.OnHit;
 using static R2API.ProcTypeAPI;
 using static NewMoon.Modules.Language.Styling;
 using EntityStates.LunarWisp;
+using RainrotSharedUtils;
 
 namespace NewMoon.Items
 {
@@ -172,34 +173,53 @@ namespace NewMoon.Items
             craftable.pickup = this.ItemsDef;
             craftable.itemIndex = this.ItemsDef.itemIndex;
 
-            RecipeIngredient glass = new RecipeIngredient();
-            glass.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_LunarDagger.LunarDagger_asset).WaitForCompletion();
-            glass.type = IngredientTypeIndex.AssetReference;
-            RecipeIngredient crown = new RecipeIngredient();
-            crown.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_GoldOnHit.GoldOnHit_asset).WaitForCompletion();
-            crown.type = IngredientTypeIndex.AssetReference;
-            RecipeIngredient lightflux = new RecipeIngredient();
-            lightflux.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_DLC1_HalfAttackSpeedHalfCooldowns.HalfAttackSpeedHalfCooldowns_asset).WaitForCompletion();
-            lightflux.type = IngredientTypeIndex.AssetReference;
-            RecipeIngredient effigy = new RecipeIngredient();
-            effigy.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_CrippleWard.CrippleWard_asset).WaitForCompletion();
-            effigy.type = IngredientTypeIndex.AssetReference;
+            List<RecipeIngredient> ingredientsL = new List<RecipeIngredient>();
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_LunarDagger.LunarDagger_asset, "relic of soul - shaped glass");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_LunarBadLuck.LunarBadLuck_asset, "relic of soul - purity");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_DLC1_HalfAttackSpeedHalfCooldowns.HalfAttackSpeedHalfCooldowns_asset, "relic of soul - light flux pauldron");
+            ingredientsL.TryLoadAndAddIngredient<EquipmentDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_CrippleWard.CrippleWard_asset, "relic of soul - effigy of grief");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_BarrierOnKill.BarrierOnKill_asset, "relic of soul - topaz brooch");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_IgniteOnKill.IgniteOnKill_asset, "relic of soul - GALSONE");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_DLC1_MoveSpeedOnKill.MoveSpeedOnKill_asset, "relic of soul - hunters harpoon");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_WarCryOnMultiKill.WarCryOnMultiKill_asset, "relic of soul - berzerkers pauldron");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_ExplodeOnDeath.ExplodeOnDeath_asset, "relic of soul - willowisp");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_Tooth.Tooth_asset, "relic of soul - monster tooth");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_StickyBomb.StickyBomb_asset, "relic of soul - sticky bomb");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_Missile.Missile_asset, "relic of soul - atg missile");
+            ingredientsL.TryLoadAndAddIngredient<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_DLC1_PrimarySkillShuriken.PrimarySkillShuriken_asset, "relic of soul - shuriken");
+            ingredientsL.TryLoadAndAddIngredient<EquipmentDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_CommandMissile.CommandMissile_asset, "relic of soul - disposable missile launcher");
+            ingredientsL.TryLoadAndAddIngredient<EquipmentDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_BFG.BFG_asset, "relic of soul - preon accumulator");
+            ingredientsL.TryLoadAndAddIngredient<EquipmentDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_DLC1_BossHunter.BossHunter_asset, "relic of soul - tricorn");
 
-            RecipeIngredient[] anyQuest = Tools.GetAllBossKeyIngredients();
-            //    new RecipeIngredient();
+            craftable.AddAllRecipePermutations(ingredientsL.ToArray(), CraftingUtils.VanillaBossKeys);
+            Content.AddCraftableDef(craftable);
+
+            //RecipeIngredient glass = new RecipeIngredient();
+            //glass.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_LunarDagger.LunarDagger_asset).WaitForCompletion();
+            //glass.type = IngredientTypeIndex.AssetReference;
+            //RecipeIngredient crown = new RecipeIngredient();
+            //crown.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_GoldOnHit.GoldOnHit_asset).WaitForCompletion();
+            //crown.type = IngredientTypeIndex.AssetReference;
+            //RecipeIngredient lightflux = new RecipeIngredient();
+            //lightflux.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_DLC1_HalfAttackSpeedHalfCooldowns.HalfAttackSpeedHalfCooldowns_asset).WaitForCompletion();
+            //lightflux.type = IngredientTypeIndex.AssetReference;
+            //RecipeIngredient effigy = new RecipeIngredient();
+            //effigy.pickup = Addressables.LoadAssetAsync<ItemDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_CrippleWard.CrippleWard_asset).WaitForCompletion();
+            //effigy.type = IngredientTypeIndex.AssetReference;
+            //
+            //RecipeIngredient anyQuest = new RecipeIngredient();
             //anyQuest.requiredTags = new ItemTag[] { ItemTag.ObjectiveRelated };
             //anyQuest.forbiddenTags = new ItemTag[] { ItemTag.Count };
             //anyQuest.type = IngredientTypeIndex.AnyItem;
             //anyQuest.itemTier = ItemTier.Boss;
-            RecipeIngredient[] anyWithTags = Tools.GetAllIngredientsWithTags(
-                required: new ItemTag[] { ItemTag.Damage },
-                forbidden: new ItemTag[] { },
-                maxTier: 3
-                );
-
-            craftable.recipes = new Recipe[0];
-            craftable.AddAllRecipePermutations(anyWithTags.Concat(new RecipeIngredient[] { glass, crown, lightflux/*, effigy*/ }).ToArray(), anyQuest);
-            Content.AddCraftableDef(craftable);
+            //RecipeIngredient[] anyWithTags = Tools.GetAllIngredientsWithTags(
+            //    required: new ItemTag[] { ItemTag.OnKillEffect },
+            //    forbidden: new ItemTag[] { ItemTag.Count },
+            //    maxTier: 3
+            //    );
+            //
+            //craftable.AddAllRecipePermutations(ingredientsL.ToArray(), CraftingUtils.VanillaBossKeys);
+            //Content.AddCraftableDef(craftable);
         }
 
         private void SpiritSpeedBoosts(CharacterBody sender, StatHookEventArgs args)
