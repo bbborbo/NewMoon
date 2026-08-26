@@ -29,6 +29,7 @@ namespace NewMoon
 		{
 			//On.RoR2.MoonBatteryMissionController.OnBatteryCharged += PillarsDropItems;
 			On.RoR2.MoonBatteryMissionController.Awake += ReduceRequiredPillars;
+			On.RoR2.MoonBatteryMissionController.OnEnable += MoonBossRush;
 			On.RoR2.MoonBatteryMissionController.OnBatteryCharged += ChangePillarRequirement;
 			On.EntityStates.Missions.GeodeSecretMission.GeodeSecretMissionRewardState.DropRewards += ReplaceGeodeSecretMissionRewards;
 
@@ -52,6 +53,18 @@ namespace NewMoon
 			{
 				PillarItemDropper dropper = pillarPrefab.AddComponent<PillarItemDropper>();
 				dropper.pillarType = pillarType;
+			}
+		}
+
+        private void MoonBossRush(On.RoR2.MoonBatteryMissionController.orig_OnEnable orig, MoonBatteryMissionController self)
+        {
+			orig(self);
+			if (NewMoonPlugin.TeamHasRelics(TeamIndex.Player))
+			{
+				self.Network_numChargedBatteries = requiredPillarCt;
+				isBossRush = true;
+				Chat.ServerAttemptBroadcastChat($"{MithrixStyle("The King of Nothing welcomes you...")}");
+				self.OnBatteryCharged(null);
 			}
 		}
 
@@ -152,17 +165,6 @@ namespace NewMoon
         private void ReduceRequiredPillars(On.RoR2.MoonBatteryMissionController.orig_Awake orig, MoonBatteryMissionController self)
 		{
 			isBossRush = false;
-            if (NewMoonPlugin.TeamHasRelics(TeamIndex.Player))
-            {
-				self._numRequiredBatteries = 0;
-				isBossRush = true;
-				Chat.ServerAttemptBroadcastChat($"{MithrixStyle("The King of Nothing welcomes you...")}");
-				self.OnBatteryCharged(null);
-            }
-            else
-            {
-				self._numRequiredBatteries = 2;
-            }
 
 			orig(self);
 
