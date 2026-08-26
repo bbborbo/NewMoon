@@ -93,6 +93,7 @@ namespace NewMoon.Items
                 );
 
             base.Init();
+            ItemAPI.ApplyTagToItem(NewMoonPlugin.IsMoonRelic, ItemsDef);
 
             NewMoonPlugin.LoadAsync<GameObject>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_LunarWisp.LunarWispTrackingBomb_prefab, CreateSoulProjectile);
         }

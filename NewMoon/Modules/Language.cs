@@ -8,6 +8,10 @@ namespace NewMoon.Modules {
     {
         public static class Styling
         {
+            public static string MithrixStyle(string text)
+            {
+                return $"<color=#c6d5ff><size=120%>{text}</color></size>";
+            }
             public static string ConvertDecimal(float value)
             {
                 return (value * 100).ToString() + "%";

@@ -9,6 +9,7 @@ using UnityEngine.AddressableAssets;
 using NewMoon.Components;
 using System;
 using EntityStates.Missions.Moon;
+using static NewMoon.Modules.Language.Styling;
 
 namespace NewMoon
 {
@@ -22,6 +23,7 @@ namespace NewMoon
 		public static float pillarDropForce = 20f;
 		public static int baseRewardCount = 1;
 		public static bool scaleRewardsByPlayerCount = true;
+		private static bool isBossRush = false;
 
 		void MakePillarsFun()
 		{
@@ -100,12 +102,20 @@ namespace NewMoon
 
         private void ChangePillarRequirement(On.RoR2.MoonBatteryMissionController.orig_OnBatteryCharged orig, MoonBatteryMissionController self, HoldoutZoneController holdoutZone)
 		{
-			self.Network_numChargedBatteries = self._numChargedBatteries + 1;
+			bool wasCharged = self._numChargedBatteries >= requiredPillarCt;
+
+			if (holdoutZone != null)
+				self.Network_numChargedBatteries = self._numChargedBatteries + 1;
+
 			if (!NetworkServer.active)
 				return;
 
 			if (self._numChargedBatteries >= requiredPillarCt)
 			{
+                if (wasCharged == false)
+                {
+					Chat.ServerAttemptBroadcastChat($"{MithrixStyle("A path forward is cleared...")}");
+                }
 				for (int k = 0; k < self.elevatorStateMachines.Length; k++)
 				{
 					self.elevatorStateMachines[k].SetNextState(new InactiveToReady());
@@ -137,8 +147,21 @@ namespace NewMoon
 
         private void ReduceRequiredPillars(On.RoR2.MoonBatteryMissionController.orig_Awake orig, MoonBatteryMissionController self)
 		{
+			isBossRush = false;
+            if (NewMoonPlugin.TeamHasRelics(TeamIndex.Player))
+            {
+				self._numRequiredBatteries = 0;
+				isBossRush = true;
+				Chat.ServerAttemptBroadcastChat($"{MithrixStyle("The King of Nothing welcomes you...")}");
+				self.OnBatteryCharged(null);
+            }
+            else
+            {
+				self._numRequiredBatteries = 2;
+            }
+
 			orig(self);
-			self._numRequiredBatteries = 2;
+
 			foreach(GameObject pillarObject in self.moonBatteries)
 			{
 				PillarItemDropper dropper = pillarObject.GetComponent<PillarItemDropper>();

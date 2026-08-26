@@ -67,6 +67,7 @@ namespace NewMoon.Items
             beetleArmor = Content.CreateAndAddBuff("bdAnomalyArmor",
                 Addressables.LoadAssetAsync<Sprite>("RoR2/Base/LunarSkillReplacements/texBuffLunarDetonatorIcon.tif").WaitForCompletion(),
                 Color.cyan, true, false);
+            ItemAPI.ApplyTagToItem(NewMoonPlugin.IsMoonRelic, ItemsDef);
         }
 
         public override void PostInit()

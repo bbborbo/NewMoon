@@ -87,6 +87,7 @@ namespace NewMoon.Items
                 isHidden: false
                 );
             base.Init();
+            ItemAPI.ApplyTagToItem(NewMoonPlugin.IsMoonRelic, ItemsDef);
         }
         public override void PostInit()
         {

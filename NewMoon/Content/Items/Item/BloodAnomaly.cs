@@ -103,6 +103,7 @@ namespace NewMoon.Items
 			NewMoonPlugin.LoadAsync<GameObject>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_NearbyDamageBonus.NearbyDamageBonusIndicator_prefab, CreateRangeIndicator);
 
 			base.Init();
+			ItemAPI.ApplyTagToItem(NewMoonPlugin.IsMoonRelic, ItemsDef);
 		}
 
         private void CreateRangeIndicator(GameObject obj)

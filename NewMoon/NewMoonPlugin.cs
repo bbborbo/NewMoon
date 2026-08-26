@@ -18,6 +18,7 @@ using NewMoon.Modules;
 using NewMoon.Items;
 using NewMoon.Artifacts;
 using ProcSolver;
+using System.Collections.ObjectModel;
 
 #pragma warning disable CS0618 // Type or member is obsolete
 [assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
@@ -51,7 +52,32 @@ namespace NewMoon
 
         internal static event Action onLoaded;
 
-        public static ItemTierDef lunarRelicTierDef;
+        public static ItemTag IsMoonRelic;
+        public static bool TeamHasRelics(TeamIndex teamIndex)
+        {
+            if (DoPillarItemDrop == false)
+                return false;
+            int num = 0;
+            ReadOnlyCollection<CharacterMaster> readOnlyInstancesList = CharacterMaster.readOnlyInstancesList;
+            int i = 0;
+            int count = readOnlyInstancesList.Count;
+            while (i < count)
+            {
+                CharacterMaster characterMaster = readOnlyInstancesList[i];
+                if (characterMaster.teamIndex == teamIndex && 
+                    (!characterMaster.playerCharacterMasterController || characterMaster.playerCharacterMasterController.isConnected))
+                {
+                    num += characterMaster.inventory.GetItemCountEffective(SoulAnomaly.instance.ItemsDef);
+                    num += characterMaster.inventory.GetItemCountEffective(BloodAnomaly.instance.ItemsDef);
+                    num += characterMaster.inventory.GetItemCountEffective(DesignAnomaly.instance.ItemsDef);
+                    num += characterMaster.inventory.GetItemCountEffective(MassAnomaly.instance.ItemsDef);
+                }
+                i++;
+                if (num > count)
+                    return true;
+            }
+            return false;
+        }
 
         #region config
         public static bool DoPillarItemDrop = false;
@@ -78,6 +104,8 @@ namespace NewMoon
 
             Modules.Config.Init();
             Log.Init(Logger);
+
+            IsMoonRelic = ItemAPI.AddItemTag("IsMoonRelic");
 
             //lunarRelicTierDef = ScriptableObject.CreateInstance<ItemTierDef>();
             //lunarRelicTierDef.name = "Lunar Relic";
