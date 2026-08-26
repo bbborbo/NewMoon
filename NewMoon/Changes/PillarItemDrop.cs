@@ -110,7 +110,7 @@ namespace NewMoon
 			if (!NetworkServer.active)
 				return;
 
-			if (self._numChargedBatteries >= requiredPillarCt)
+			if (self._numChargedBatteries >= self._numRequiredBatteries)
 			{
                 if (wasCharged == false)
                 {
@@ -124,7 +124,11 @@ namespace NewMoon
 			else
 				return;
 
-			if (self._numChargedBatteries >= maxPillarCt)
+			int maxPillarCount = maxPillarCt;
+			if (isBossRush)
+				maxPillarCount = maxPillarCount - requiredPillarCt;
+
+			if (self._numChargedBatteries >= maxPillarCount)
 			{
 				for (int i = 0; i < self.batteryHoldoutZones.Length; i++)
 				{
