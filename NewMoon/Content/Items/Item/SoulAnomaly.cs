@@ -16,6 +16,8 @@ using static R2API.ProcTypeAPI;
 using static NewMoon.Modules.Language.Styling;
 using EntityStates.LunarWisp;
 using RainrotSharedUtils;
+using MonoMod.Cil;
+using Mono.Cecil.Cil;
 
 namespace NewMoon.Items
 {
@@ -36,9 +38,9 @@ namespace NewMoon.Items
         [AutoConfig("Max Bonus Attack Speed Multiplier", 1.3f)]
         public static float maxAttackMultAdd = 1.3f;
 
-        public static float procChanceMin = 5f;
-        public static float procChanceBase = 3f;
-        public static float procChanceStack = 3f;
+        public static float procChanceMin = 3f;
+        public static float overspillChanceBase = 2f;
+        public static float overspillChanceStack = 2f;
 
         public static float soulProjectileDamageCoefficient = 6f;
         #endregion
@@ -61,7 +63,7 @@ namespace NewMoon.Items
             $"{UtilityColor("force-triggering")} all {UtilityColor("on-kill effects")} upon impact. " +
             $"Copies the source attack's damage type. " +
             $"Every {DamageColor(1f.AsPercent())} attack damage dealt increases activation chance " +
-            $"by {DamageColor(procChanceBase + "%")} {StackText($"+{procChanceStack}%")}.";
+            $"by {DamageColor(overspillChanceBase + "%")} {StackText($"+{overspillChanceStack}%")}.";
             //$"Gain {Tools.ConvertDecimal(baseMoveSpeedAdd)} movement speed. " +
             //$"For every missing <style=cIsHealth>{100 / (float)SoulAnomalyBehavior.maxBuffCount}% of max health</style>, " +
             //$"increase movement speed by <style=cIsDamage>{Tools.ConvertDecimal(maxMoveMultAdd / SoulAnomalyBehavior.maxBuffCount)}</style> " +
@@ -106,6 +108,8 @@ namespace NewMoon.Items
             if(soulProjectile.TryGetComponent(out hc))
             {
                 hc.globalDeathEventChanceCoefficient = 0;
+                hc.health = 1;
+                hc.isDefaultGodMode = true;
             }
 
             ProjectileGrantOnKillOnDestroy onKillTrigger = soulProjectile.AddComponent<ProjectileGrantOnKillOnDestroy>();
@@ -123,8 +127,41 @@ namespace NewMoon.Items
         public override void Hooks()
         {
             GetHitBehavior += FireSoulProjectileOnHit;
+            IL.RoR2.GlobalEventManager.OnCharacterDeath += ShitterSpleen;
             //On.RoR2.CharacterBody.OnInventoryChanged += AddItemBehavior;
             //GetStatCoefficients += SpiritSpeedBoosts;
+        }
+
+        private void ShitterSpleen(ILContext il)
+        {
+            ILCursor c = new ILCursor(il);
+
+            bool b = c.TryGotoNext(MoveType.After,
+                x => x.MatchLdsfld("RoR2.RoR2Content/Items", "BleedOnHitAndExplode"),
+                x => x.MatchCallOrCallvirt<RoR2.Inventory>(nameof(RoR2.Inventory.GetItemCountEffective))
+                );
+            if (!b)
+            {
+                NewMoonPlugin.DebugBreakpoint(nameof(ShitterSpleen), 1);
+                return;
+            }
+            int victimBodyLoc = 3;
+            bool b2 = c.TryGotoNext(MoveType.After,
+                x => x.MatchLdloc(out victimBodyLoc),
+                x => x.MatchCallOrCallvirt<CharacterBody>("get_maxHealth")
+                );
+            if (!b2)
+            {
+                NewMoonPlugin.DebugBreakpoint(nameof(ShitterSpleen), 1);
+                return;
+            }
+            c.Emit(OpCodes.Ldloc, victimBodyLoc);
+            c.EmitDelegate<Func<float, CharacterBody, float>>((maxHealthIn, victimBody) =>
+            {
+                if (victimBody.healthComponent != null && victimBody.healthComponent.alive)
+                    return 0;
+                return maxHealthIn;
+            });
         }
 
         private void FireSoulProjectileOnHit(CharacterBody attackerBody, DamageInfo damageInfo, CharacterBody victimBody)
@@ -142,7 +179,7 @@ namespace NewMoon.Items
             float damageCoefficient = damageInfo.damage /= attackerBody.damage;
             float procRate = NewMoonPlugin.GetProcRate(damageInfo);//damageInfo.procCoefficient;
 
-            float procChance = Util.ConvertAmplificationPercentageIntoReductionPercentage((procChanceMin + GetStackValue(procChanceBase, procChanceStack, relicCt) * damageCoefficient) * procRate);
+            float procChance = Util.ConvertAmplificationPercentageIntoReductionPercentage((procChanceMin + GetStackValue(overspillChanceBase, overspillChanceStack, relicCt) * damageCoefficient) * procRate);
             if(Util.CheckRoll(procChance, attackerBody.master))
             {
                 Ray aimRay = attackerBody.inputBank.GetAimRay();
