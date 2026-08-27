@@ -16,11 +16,48 @@ using RoR2.Items;
 using MoreStats;
 using EntityStates.Mage;
 using RainrotSharedUtils;
+using R2API.Networking.Interfaces;
+using R2API.Networking;
 
 [assembly: HG.Reflection.SearchableAttribute.OptIn]
 
 namespace NewMoon.Items
 {
+    public class SyncDesignRelicState : INetMessage
+    {
+        GameObject bodyObject;
+        bool downState;
+        public SyncDesignRelicState()
+        {
+        }
+        public SyncDesignRelicState(GameObject bodyObject, bool downState)
+        {
+            this.bodyObject = bodyObject;
+            this.downState = downState;
+        }
+
+        public void Serialize(NetworkWriter writer)
+        {
+            writer.Write(this.bodyObject);
+            writer.Write(this.downState);
+        }
+        public void Deserialize(NetworkReader reader)
+        {
+            this.bodyObject = reader.ReadGameObject();
+            this.downState = reader.ReadBoolean();
+        }
+
+        public void OnReceived()
+        {
+            if (!NetworkServer.active)
+                return;
+
+            if(bodyObject.TryGetComponent(out CharacterBody body))
+            {
+                DesignAnomaly.UpdateJetpackDownState(body, downState);
+            }
+        }
+    }
     class DesignAnomaly : ItemBase<DesignAnomaly>
     {
         public override bool forcePrerequisites => true;
@@ -48,8 +85,7 @@ namespace NewMoon.Items
 
         public override string ItemFullDescription => $"Gain an additional air jump. While airborne, holding JUMP allows you to float in the air with " +
             $"{UtilityColor($"+{movementSpeedWhileHoveringBase.AsPercent()}")} movement speed {StackText($"+{movementSpeedWhileHoveringStack.AsPercent()}")} " +
-            $"for up to {UtilityColor(((float)maxHoverChargeBase / 60f).ToString())} seconds {StackText("+" + ((float)maxHoverChargeStack / 60f).ToString())}. " +
-            $"{StackColor($"(Recharges {((float)rechargePerFrameStack / (float)rechargePerFrameBase).AsPercent()} faster per stack)")}";
+            $"for up to {UtilityColor(((float)maxHoverChargeBase / 60f).ToString())} seconds {StackText("+" + ((float)maxHoverChargeStack / 60f).ToString())}.";
 
         public override string ItemLore => "";
 
@@ -68,6 +104,7 @@ namespace NewMoon.Items
 
         public override void Init()
         {
+            NetworkingAPI.RegisterMessageType<SyncDesignRelicState>();
             HoverChargeBuff = Content.CreateAndAddBuff(
                 "bdDesignHoverCharge",
                 Addressables.LoadAssetAsync<BuffDef>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_Common.bdOnFire_asset).WaitForCompletion().iconSprite,
@@ -84,7 +121,7 @@ namespace NewMoon.Items
                 canStack: false,
                 isDebuff: false,
                 BuffDef.StackingDisplayMethod.Percentage,
-                isHidden: false
+                isHidden: true
                 );
             base.Init();
             ItemAPI.ApplyTagToItem(NewMoonPlugin.IsMoonRelic, ItemsDef);
@@ -167,38 +204,56 @@ namespace NewMoon.Items
         private void Hover(On.EntityStates.GenericCharacterMain.orig_FixedUpdate orig, EntityStates.GenericCharacterMain self)
         {
             orig(self);
-            if (self.hasCharacterMotor && self.hasInputBank && self.isAuthority)
+            if (self.hasInputBank)
             {
                 CharacterBody body = self.characterBody;
                 CharacterMotor motor = self.characterMotor;
-                if (body)
+                if (self.hasCharacterMotor && body)
                 {
-                    bool jumpInputDown = self.inputBank.jump.down && !self.characterMotor.isGrounded;
-                    if (jumpInputDown == true && body.HasBuff(HoverChargeBuff))
+                    float verticalVelocity = motor.velocity.y;
+
+                    if (self.isAuthority)
                     {
-                        float verticalVelocity = motor.velocity.y;
-                        if(verticalVelocity <= float.Epsilon)
+                        bool jumpInputDown = self.inputBank.jump.down && !self.characterMotor.isGrounded;
+                        if (jumpInputDown == true && body.HasBuff(HoverChargeBuff))
+                        {
+                            if (verticalVelocity <= float.Epsilon)
+                            {
+                                if (body.HasBuff(DesignAnomaly.HoverActiveBuff) == false)
+                                {
+                                    TryUpdateJetpackDownState(body, true);
+                                }
+                            }
+                        }
+                        if (jumpInputDown != self.inputBank.jump.wasDown)
+                        {
+                            TryUpdateJetpackDownState(body, jumpInputDown);
+                        }
+                    }
+
+                    if (NetworkServer.active)
+                    {
+                        if (body.HasBuff(DesignAnomaly.HoverActiveBuff))
                         {
                             verticalVelocity = Mathf.MoveTowards(verticalVelocity, 0, JetpackOn.hoverAcceleration * self.GetDeltaTime() * 2f); //yay magic numbers yay yay yay
                             motor.velocity = new Vector3(motor.velocity.x, Mathf.Min(verticalVelocity, 0), motor.velocity.z);
-                            body.RemoveBuff(DesignAnomaly.HoverChargeBuff);
-                            if (!body.HasBuff(DesignAnomaly.HoverChargeBuff))
-                            {
-                                UpdateJetpackDownState(body, false);
-                            }
-                            else if (!body.HasBuff(DesignAnomaly.HoverActiveBuff))
-                                UpdateJetpackDownState(body, true);
                         }
-                    }
-                    if (jumpInputDown != self.inputBank.jump.wasDown)
-                    {
-                        UpdateJetpackDownState(body, jumpInputDown);
                     }
                 }
             }
+
+            void TryUpdateJetpackDownState(CharacterBody body, bool state)
+            {
+                if (NetworkServer.active)
+                {
+                    UpdateJetpackDownState(body, state);
+                    return;
+                }
+                new SyncDesignRelicState(body.gameObject, state).Send(NetworkDestination.Server);
+            }
         }
 
-        private static void UpdateJetpackDownState(CharacterBody body, bool isDown)
+        internal static void UpdateJetpackDownState(CharacterBody body, bool isDown)
         {
             if(body && body.inventory && body.inventory.GetItemCountEffective(DesignAnomaly.instance.ItemsDef) > 0)
             {
@@ -213,8 +268,35 @@ namespace NewMoon.Items
         [ItemDefAssociation(useOnServer = true, useOnClient = false)]
         private static ItemDef GetItemDef() => DesignAnomaly.instance?.ItemsDef ?? null;
 
+        private int _hoverCharge;
+        public int hoverCharge
+        {
+            get
+            {
+                return _hoverCharge;
+            }
+            set
+            {
+                _hoverCharge = value;
+                body.SetBuffCount(DesignAnomaly.HoverChargeBuff.buffIndex, Mathf.RoundToInt(100 * value / cachedMaxCharge));
+            }
+        }
         public bool isHoverButtonHeld = false;
         private float rechargeDelayCountdown = 0;
+        private int cachedMaxCharge = 0;
+        private int cachedChargeRate = 0;
+
+        public override void OnInventoryRefresh()
+        {
+            CalculateChargeStats();
+            base.OnInventoryRefresh();
+        }
+
+        void CalculateChargeStats()
+        {
+            cachedChargeRate = DesignAnomaly.rechargePerFrameBase + DesignAnomaly.rechargePerFrameStack * (stack - 1);
+            cachedMaxCharge = DesignAnomaly.maxHoverChargeBase + DesignAnomaly.maxHoverChargeStack * (stack - 1);
+        }
 
         public void UpdateInputState(bool isDown)
         {
@@ -239,6 +321,12 @@ namespace NewMoon.Items
             {
                 if(IsFalling(body))
                 {
+                    if(hoverCharge > 0)
+                    {
+                        hoverCharge--;
+                    }
+                    if (hoverCharge <= 0)
+                        UpdateInputState(false);
                     rechargeDelayCountdown = DesignAnomaly.rechargeDelay;
                     return;
                 }
@@ -248,30 +336,27 @@ namespace NewMoon.Items
                 rechargeDelayCountdown -= Time.fixedDeltaTime;
                 return;
             }
-            int recharge = DesignAnomaly.rechargePerFrameBase + DesignAnomaly.rechargePerFrameStack * (stack - 1);
-            int maxCharge = DesignAnomaly.maxHoverChargeBase + DesignAnomaly.maxHoverChargeStack * (stack - 1);
-            for(int i = 0; i < recharge; i++)
-            {
-                if (body.GetBuffCount(DesignAnomaly.HoverChargeBuff) >= maxCharge)
-                    break;
-                body.AddBuff(DesignAnomaly.HoverChargeBuff);
-            }
+            hoverCharge = Mathf.Min(hoverCharge + cachedChargeRate, cachedMaxCharge);
+            //int recharge = DesignAnomaly.rechargePerFrameBase + DesignAnomaly.rechargePerFrameStack * (stack - 1);
+            //int maxCharge = DesignAnomaly.maxHoverChargeBase + DesignAnomaly.maxHoverChargeStack * (stack - 1);
+            //for(int i = 0; i < recharge; i++)
+            //{
+            //    if (body.GetBuffCount(DesignAnomaly.HoverChargeBuff) >= maxCharge)
+            //        break;
+            //    body.AddBuff(DesignAnomaly.HoverChargeBuff);
+            //}
         }
 
         private void OnEnable()
         {
-            int maxCharge = DesignAnomaly.maxHoverChargeBase + DesignAnomaly.maxHoverChargeStack * (stack - 1);
-            for (int i = body.GetBuffCount(DesignAnomaly.HoverChargeBuff); i < maxCharge; i++)
-            {
-                body.AddBuff(DesignAnomaly.HoverChargeBuff);
-            }
+            CalculateChargeStats();
+            hoverCharge = cachedMaxCharge;
+            //body.SetBuffCount(DesignAnomaly.HoverChargeBuff.buffIndex, cachedMaxCharge);
         }
         private void OnDisable()
         {
-            for (int i = body.GetBuffCount(DesignAnomaly.HoverChargeBuff); i == 0; i--)
-            {
-                body.RemoveBuff(DesignAnomaly.HoverChargeBuff);
-            }
+            hoverCharge = 0;
+            //body.SetBuffCount(DesignAnomaly.HoverChargeBuff.buffIndex, 0);
         }
     }
 }
