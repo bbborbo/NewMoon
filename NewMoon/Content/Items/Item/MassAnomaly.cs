@@ -30,7 +30,7 @@ namespace NewMoon.Items
         public override string ConfigName => "Items : Commencement : Relic of Mass";
         public static BuffDef beetleArmor;
         public static int maxBeetleArmorStacks = 3;
-        public static int durationPerBeetleArmor = 3;
+        public static int durationPerBeetleArmor = 5;
         public static int armorPerBuffBase = 50;
         public static int armorPerBuffStack = 25;
         public static float retaliateCrippleDuration = 9f;
