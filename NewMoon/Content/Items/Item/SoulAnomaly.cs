@@ -31,18 +31,22 @@ namespace NewMoon.Items
         #region config
         public override string ConfigName => "Items : Commencement : Relic of Soul";
 
-        [AutoConfig("Base Movement Speed Multiplier", 0.2f)]
+        //[AutoConfig("Base Movement Speed Multiplier", 0.2f)]
         public static float baseMoveSpeedAdd = 0.2f;
-        [AutoConfig("Max Bonus Movement Speed Multiplier", 1.3f)]
+        //[AutoConfig("Max Bonus Movement Speed Multiplier", 1.3f)]
         public static float maxMoveMultAdd = 1.3f;
-        [AutoConfig("Max Bonus Attack Speed Multiplier", 1.3f)]
+        //[AutoConfig("Max Bonus Attack Speed Multiplier", 1.3f)]
         public static float maxAttackMultAdd = 1.3f;
-
+        [AutoConfig("Soul Projectile Proc Chance (Initial)", 3f)]
         public static float procChanceMin = 3f;
+        [AutoConfig("Soul Projectile Proc Chance Per 100% Damage Dealt (Base)", 2f)]
         public static float overspillChanceBase = 2f;
+        [AutoConfig("Soul Projectile Proc Chance Per 100% Damage Dealt (Stack)", 2f)]
         public static float overspillChanceStack = 2f;
-
+        [AutoConfig("Soul Projectile Damage Coefficient (Base)", 6f)]
         public static float soulProjectileDamageCoefficient = 6f;
+        [AutoConfig("Soul Projectile Damage Coefficient (Stack)", 0f)]
+        public static float soulProjectileDamageCoefficientStack = 0f;
         #endregion
 
         public static ModdedProcType soulProjectileProcType;
@@ -182,12 +186,13 @@ namespace NewMoon.Items
             float procChance = Util.ConvertAmplificationPercentageIntoReductionPercentage((procChanceMin + GetStackValue(overspillChanceBase, overspillChanceStack, relicCt) * damageCoefficient) * procRate);
             if(Util.CheckRoll(procChance, attackerBody.master))
             {
+                float procDamage = GetStackValue(soulProjectileDamageCoefficient, soulProjectileDamageCoefficientStack, relicCt);
                 Ray aimRay = attackerBody.inputBank.GetAimRay();
                 FireProjectileInfo fpi = new FireProjectileInfo
                 {
                     projectilePrefab = soulProjectile,
                     crit = damageInfo.crit,
-                    damage = attackerBody.damage * soulProjectileDamageCoefficient,
+                    damage = attackerBody.damage * procDamage,
                     damageTypeOverride = damageInfo.damageType,
                     damageColorIndex = DamageColorIndex.Item,
                     force = 0,

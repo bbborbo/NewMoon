@@ -29,10 +29,15 @@ namespace NewMoon.Items
         }
         public override string ConfigName => "Items : Commencement : Relic of Mass";
         public static BuffDef beetleArmor;
+        [AutoConfig("Chimera Armor Max Layers", 3)]
         public static int maxBeetleArmorStacks = 3;
-        public static int durationPerBeetleArmor = 5;
+        [AutoConfig("Chimera Armor Recharge Duration", 5f)]
+        public static float durationPerBeetleArmor = 5f;
+        [AutoConfig("Chimera Armor Armor Per Layer (Base)", 50)]
         public static int armorPerBuffBase = 50;
+        [AutoConfig("Chimera Armor Armor Per Layer (Stack)", 50)]
         public static int armorPerBuffStack = 25;
+        [AutoConfig("Retaliation Cripple Duration", 9f)]
         public static float retaliateCrippleDuration = 9f;
 
         public override string ItemName => "Relic of Mass";

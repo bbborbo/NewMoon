@@ -33,29 +33,29 @@ namespace NewMoon.Items
 		#region config
 		public override string ConfigName => "Items : Commencement : Relic of Blood";
 
-        [AutoConfig("Heal Fraction On Kill Base", 0.08f)]
+        //[AutoConfig("Heal Fraction On Kill Base", 0.08f)]
         public static float healFractionOnKillBase = 0.08f;
-        [AutoConfig("Heal Fraction On Kill Stack", 0.08f)]
+        //[AutoConfig("Heal Fraction On Kill Stack", 0.08f)]
         public static float healFractionOnKillStack = 0.08f;
 
-        [AutoConfig("On-Kill Force Triggers Base", 4)]
+        //[AutoConfig("On-Kill Force Triggers Base", 4)]
         public static int onKillForceTriggersBase = 4;
-        [AutoConfig("On-Kill Force Triggers Stack", 2)]
+        //[AutoConfig("On-Kill Force Triggers Stack", 2)]
         public static int onKillForceTriggersStack = 2;
 
 		public static GameObject radiusIndicatorPrefab;
 
-		[AutoConfig("Life Steal Radius Base", 16f)]
+		[AutoConfig("Life Steal Radius (Base)", 16f)]
 		public static float lifeStealRadiusBase = 16f;
-		[AutoConfig("Life Steal Radius Stack", 0)]
+		[AutoConfig("Life Steal Radius (Stack)", 0)]
 		public static float lifeStealRadiusStack = 0f;
-		[AutoConfig("Life Steal Fraction Base", 0.05f)]
+		[AutoConfig("Life Steal Fraction (Base)", 0.05f)]
 		public static float lifeStealAmountBase = 0.05f;
-		[AutoConfig("Life Steal Fraction Stack", 0.025f)]
+		[AutoConfig("Life Steal Fraction (Stack)", 0.025f)]
 		public static float lifeStealAmountStack = 0.025f;
-		[AutoConfig("Bleed Chance Base", 10f)]
+		[AutoConfig("Bleed Chance (Base)", 10f)]
 		public static float bleedChanceBase = 10f;
-		[AutoConfig("Bleed Chance Stack", 0f)]
+		[AutoConfig("Bleed Chance (Stack)", 0f)]
 		public static float bleedChanceStack = 0f;
 		[AutoConfig("Bleed Damage Life Steal Multiplier", 0.5f)]
 		public static float bleedEffectiveProcCoeff = 0.5f;
