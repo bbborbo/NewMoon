@@ -1,5 +1,6 @@
 ﻿using EntityStates.BeetleQueenMonster;
 using EntityStates.Missions.BrotherEncounter;
+using NewMoon.Modules;
 using R2API;
 using RoR2;
 using System;
@@ -12,14 +13,19 @@ namespace NewMoon
 {
     public partial class NewMoonPlugin
     {
+        public const string exploderDirectorConfigName = "Global : Lunar Exploders Spawn On Ramps";
         public static SpawnCard exploderCard = Resources.Load<SpawnCard>("spawncards/characterspawncards/cscLunarExploder");
         List<DirectorCard> exploderCards = new List<DirectorCard>();
         public static ExploderDirector exploderDirector;
 
-        internal static float phaseTwoRate = 0f;
-        internal static float phaseThreeRate = 1f;
+        internal static float   phaseOneInterval = 20f;
+        internal static float   phaseTwoInterval = 0f;
+        internal static float phaseThreeInterval = 10f;
         public void LunarExplodersDuringBrother()
         {
+            phaseOneInterval = ConfigManager.DualBindToConfig<float>(exploderDirectorConfigName, Modules.Config.MyConfig, "Exploder Spawn Interval (Phase 1)", phaseOneInterval, "Measured in Seconds");
+            phaseTwoInterval = ConfigManager.DualBindToConfig<float>(exploderDirectorConfigName, Modules.Config.MyConfig, "Exploder Spawn Interval (Phase 2)", phaseTwoInterval, "Measured in Seconds");
+            phaseThreeInterval = ConfigManager.DualBindToConfig<float>(exploderDirectorConfigName, Modules.Config.MyConfig, "Exploder Spawn Interval (Phase 3)", phaseThreeInterval, "Measured in Seconds");
             //DirectorAPI.MonsterActions += GetExploderCard;
 
             On.EntityStates.Missions.BrotherEncounter.Phase1.OnEnter += InitializeExploderDirector;
@@ -30,7 +36,6 @@ namespace NewMoon
 
         private void GetExploderCard(List<DirectorAPI.DirectorCardHolder> cardList, DirectorAPI.StageInfo currentStage)
         {
-            Debug.Log("jsd fjsn");
             if(currentStage.stage == DirectorAPI.Stage.Commencement)
             {
                 List<DirectorAPI.DirectorCardHolder> removeList = new List<DirectorAPI.DirectorCardHolder>();
@@ -63,19 +68,20 @@ namespace NewMoon
                 ExploderDirectorObject.transform.position = new Vector3(-88f, 491.1f, 0f);
                 exploderDirector = ExploderDirectorObject.AddComponent<ExploderDirector>();
                 exploderDirector.baseState = (BrotherEncounterBaseState)self;
+                exploderDirector.SetDirectorRate(phaseOneInterval);
             }
         }
 
         private void DisableExploderDirector(On.EntityStates.Missions.BrotherEncounter.Phase2.orig_OnEnter orig, EntityStates.Missions.BrotherEncounter.Phase2 self)
         {
             orig(self);
-            exploderDirector.SetDirectorRate(phaseTwoRate);
+            exploderDirector.SetDirectorRate(phaseTwoInterval);
         }
 
         private void RestoreExploderDirector(On.EntityStates.Missions.BrotherEncounter.Phase3.orig_OnEnter orig, EntityStates.Missions.BrotherEncounter.Phase3 self)
         {
             orig(self);
-            exploderDirector.SetDirectorRate(phaseThreeRate);
+            exploderDirector.SetDirectorRate(phaseThreeInterval);
         }
 
         private void KillExploderDirector(On.EntityStates.Missions.BrotherEncounter.Phase4.orig_OnEnter orig, EntityStates.Missions.BrotherEncounter.Phase4 self)
@@ -89,26 +95,17 @@ namespace NewMoon
     {
         public void SetDirectorRate(float rate)
         {
-            if (rate <= 0)
-            {
+            spawnInterval = rate;
+            isActive = rate <= 0;
+            if (isActive == false)
                 exploderSpawnTimer = 0;
-                spawnRateModifier = 0;
-                isActive = false;
-            }
-            else 
-            {
-                isActive = true;
-                spawnRateModifier = rate;
-                spawnFrequency = baseSpawnFrequency / spawnRateModifier;
-            }
-
         }
 
         internal BrotherEncounterBaseState baseState;
-        bool isActive = false;
-        static float baseSpawnFrequency = 20f; //seconds it takes to spawn a round of exploders, assuming spawnRateModifier is 1
-        static float spawnRateModifier = 1f; //how fast it reaches the spawn frequency threshold
-        float spawnFrequency;
+        public bool isActive = false;
+        internal static float baseSpawnFrequency = 1f; 
+        static float spawnRateModifier = 0f; //how fast it reaches the spawn frequency threshold
+        float spawnInterval;
         float exploderSpawnTimer = 0f;
 
         public const float rampHeight = 524.3f;
@@ -120,7 +117,6 @@ namespace NewMoon
             if (baseState != null)
             {
                 CreateSpawnNodes();
-                SetDirectorRate(1f);
                 isActive = true;
             }
             else
@@ -153,13 +149,13 @@ namespace NewMoon
 
         void FixedUpdate()
         {
-            if(NetworkServer.active && spawnFrequency != 0)
+            if(NetworkServer.active && spawnInterval != 0)
             {
                 //Debug.Log(exploderSpawnTimer);
-                exploderSpawnTimer += Time.fixedDeltaTime * spawnRateModifier;
-                while (exploderSpawnTimer > spawnFrequency)
+                exploderSpawnTimer += Time.fixedDeltaTime;
+                while (exploderSpawnTimer > spawnInterval)
                 {
-                    exploderSpawnTimer -= spawnFrequency;
+                    exploderSpawnTimer -= spawnInterval;
 
                     //start spawning exploders
                     //int spawnCount = Run.instance.livingPlayerCount;
@@ -175,10 +171,6 @@ namespace NewMoon
 
                     StartExploderWaveStacked(playersList.Count, playersList);
                 }
-            }
-            else
-            {
-                Debug.Log("uuu");
             }
             if (baseState.outer.destroying)
             {

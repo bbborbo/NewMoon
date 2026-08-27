@@ -29,7 +29,6 @@ namespace NewMoon.Items
             return NewMoonPlugin.DoPillarItemDrop;
         }
         #region config
-        public override string ConfigName => "Items : Commencement : Relic of Soul";
 
         //[AutoConfig("Base Movement Speed Multiplier", 0.2f)]
         public static float baseMoveSpeedAdd = 0.2f;
@@ -37,15 +36,15 @@ namespace NewMoon.Items
         public static float maxMoveMultAdd = 1.3f;
         //[AutoConfig("Max Bonus Attack Speed Multiplier", 1.3f)]
         public static float maxAttackMultAdd = 1.3f;
-        [AutoConfig("Soul Projectile Proc Chance (Initial)", 3f)]
+        [AutoConfig("Proc Chance (Initial)", 3f)]
         public static float procChanceMin = 3f;
-        [AutoConfig("Soul Projectile Proc Chance Per 100% Damage Dealt (Base)", 2f)]
+        [AutoConfig("Proc Chance (Overspill, Base)", "Increases proc chance by this amount per 100% damage dealt", 2f)]
         public static float overspillChanceBase = 2f;
-        [AutoConfig("Soul Projectile Proc Chance Per 100% Damage Dealt (Stack)", 2f)]
+        [AutoConfig("Proc Chance (Overspill, Stack)", "Increases proc chance by this amount per 100% damage dealt (per stack)", 2f)]
         public static float overspillChanceStack = 2f;
-        [AutoConfig("Soul Projectile Damage Coefficient (Base)", 6f)]
+        [AutoConfig("Projectile Damage Coefficient (Base)", 6f)]
         public static float soulProjectileDamageCoefficient = 6f;
-        [AutoConfig("Soul Projectile Damage Coefficient (Stack)", 0f)]
+        [AutoConfig("Projectile Damage Coefficient (Stack)", 0f)]
         public static float soulProjectileDamageCoefficientStack = 0f;
         #endregion
 

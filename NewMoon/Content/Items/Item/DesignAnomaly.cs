@@ -66,22 +66,21 @@ namespace NewMoon.Items
             return NewMoonPlugin.DoPillarItemDrop;
         }
         #region config
-        public override string ConfigName => "Items : Commencement : Relic of Design";
         public static BuffDef HoverChargeBuff;
         public static BuffDef HoverActiveBuff;
         [AutoConfig("Fuel Recharge Delay", "Expressed in seconds", 2f)]
         public static float rechargeDelay = 2f;
-        [AutoConfig("Fuel Charge Per Frame (Base)", "Expressed in frames of duration per frame", 30)]
+        [AutoConfig("Fuel Charge Per Frame (Base)", "Expressed in frames of duration per frame", 1)]
         public static int rechargePerFrameBase = 1;
-        [AutoConfig("Fuel Charge Per Frame (Stack)", "Expressed in frames of duration per frame", 30)]
+        [AutoConfig("Fuel Charge Per Frame (Stack)", "Expressed in frames of duration per frame", 1)]
         public static int rechargePerFrameStack = 1;
         [AutoConfig("Max Hover Duration (Base)", "Expressed in frames", 60)]
         public static int maxHoverChargeBase = 60;
         [AutoConfig("Max Hover Duration (Stack)", "Expressed in frames", 30)]
         public static int maxHoverChargeStack = 30;
-        [AutoConfig("Hover Movement Speed Bonus (Base)", 0.5f)]
+        [AutoConfig("Hover Movement Speed Bonus (Base)", 2f, 0f, 10f)]
         public static float movementSpeedWhileHoveringBase = 2f;
-        [AutoConfig("Hover Movement Speed Bonus (Stack)", 0.5f)]
+        [AutoConfig("Hover Movement Speed Bonus (Stack)", 0.5f, 0f, 10f)]
         public static float movementSpeedWhileHoveringStack = 0.5f;
         #endregion
         public override string ItemName => "Relic of Design";

@@ -37,7 +37,7 @@ namespace NewMoon
     [BepInDependency(R2API.RecalculateStatsAPI.PluginGUID, BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency(R2API.EliteAPI.PluginGUID, BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency(R2API.ProcTypeAPI.PluginGUID, BepInDependency.DependencyFlags.HardDependency)]
-    [BepInDependency(RiskOfOptions.PluginInfo.PLUGIN_GUID, BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("com.rune580.riskofoptions", BepInDependency.DependencyFlags.SoftDependency)]
 
     [NetworkCompatibility(CompatibilityLevel.EveryoneMustHaveMod, VersionStrictness.EveryoneNeedSameModVersion)]
     [BepInPlugin(guid, modName, version)]
@@ -141,7 +141,7 @@ namespace NewMoon
             {
                 MakePillarsFun();
             }
-            if(GetConfigBool(true, "Global : Mithrix : Lunar Exploders Spawn On Ramps", 
+            if(GetConfigBool(true, exploderDirectorConfigName, 
                 "Setting to TRUE will cause Lunar Exploders to spawn on arena ramps during the fight."))
             {
                 LunarExplodersDuringBrother();

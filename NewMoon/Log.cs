@@ -21,7 +21,7 @@ namespace NewMoon
         internal static void Init(ManualLogSource logSource)
         {
             enableDebugging = Modules.ConfigManager.DualBindToConfig<bool>(
-                "Swan Song", Modules.Config.MyConfig, "Enable Debugging", false,
+                NewMoonPlugin.modName, Modules.Config.MyConfig, "Enable Debugging", false,
                 "Enable debug outputs to the log for troubleshooting purposes. Enabling this will slow down the game.");
             _logSource = logSource;
         }

@@ -19,14 +19,20 @@ namespace NewMoon.Modules
         public string name;
         public string desc;
         public object defaultValue;
+        public float minValue;
+        public float maxValue;
 
-        public AutoConfigAttribute(string name, object defaultValue) => Init(name, string.Empty, defaultValue);
-        public AutoConfigAttribute(string name, string desc, object defaultValue) => Init(name, desc, defaultValue);
-        public void Init(string name, string desc, object defaultValue)
+        public AutoConfigAttribute(string name, object defaultValue) => Init(name, string.Empty, defaultValue, 0f, 100f);
+        public AutoConfigAttribute(string name, string desc, object defaultValue) => Init(name, desc, defaultValue, 0f, 100f);
+        public AutoConfigAttribute(string name, object defaultValue, float minValue, float maxValue) => Init(name, string.Empty, defaultValue, minValue, maxValue);
+        public AutoConfigAttribute(string name, string desc, object defaultValue, float minValue, float maxValue) => Init(name, desc, defaultValue, minValue, maxValue);
+        public void Init(string name, string desc, object defaultValue, float minValue, float maxValue)
         {
             this.name = name;
             this.desc = desc;
             this.defaultValue = defaultValue;
+            this.minValue = minValue;
+            this.maxValue = maxValue;
         }
     }
 
@@ -101,7 +107,7 @@ namespace NewMoon.Modules
 
         //add risk of options dll to your project libs and uncomment this for a soft dependency
         [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
-        private static void TryRegisterOption<T>(ConfigEntry<T> entry, float min, float max, bool restartRequired)
+        internal static void TryRegisterOption(ConfigEntryBase entry, float min, float max, bool restartRequired)
         {
             if (entry is ConfigEntry<float>)
             {
@@ -157,31 +163,39 @@ namespace NewMoon.Modules
                 string configName = configattr.name;
                 object defaultValue = configattr.defaultValue;
                 string configDesc = configattr.desc;
+                float minValue = configattr.minValue;
+                float maxValue = configattr.maxValue;
 
-                field.SetValue(null, DualBindToConfig(t, section, config, configName, defaultValue, configDesc));
+                field.SetValue(null, DualBindToConfig(t, section, config, configName, defaultValue, configDesc, minValue, maxValue));
             }
         }
 
-        private static object DualBindToConfig(Type t, string section, ConfigFile config, string configName, object defaultValue, string configDesc)
+        private static object DualBindToConfig(Type t, string section, ConfigFile config, string configName, object defaultValue, string configDesc, 
+            float minValue = 0f, float maxValue = 100f)
         {
             if (string.IsNullOrWhiteSpace(section) || string.IsNullOrWhiteSpace(configName))
                 return defaultValue;
             ConfigDescription desc = new ConfigDescription(configDesc);
 
             //get the method for binding to a config file
-            MethodInfo method = typeof(ConfigFile).GetMethods().Where(x => x.Name == nameof(ConfigFile.Bind)).First();
-            method = method.MakeGenericMethod(t);
+            MethodInfo bind = typeof(ConfigFile).GetMethods().Where(x => x.Name == nameof(ConfigFile.Bind)).First();
+            bind = bind.MakeGenericMethod(t);
 
             //bind to chosen config file
-            ConfigEntryBase configValue = (ConfigEntryBase)method.Invoke(config,
+            ConfigEntryBase configValue = (ConfigEntryBase)bind.Invoke(config,
                 new object[] {
                         new ConfigDefinition(section, configName),
                         defaultValue,
                         desc
                 });
 
+            if (BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("com.rune580.riskofoptions"))
+            {
+                Config.TryRegisterOption(configValue, minValue, maxValue, true);
+            }
+
             //bind to backup config for versioning
-            ConfigEntryBase backupValue = (ConfigEntryBase)method.Invoke(Config.BackupConfig,
+            ConfigEntryBase backupValue = (ConfigEntryBase)bind.Invoke(Config.BackupConfig,
                 new object[] {
                         new ConfigDefinition(Regex.Replace(config.ConfigFilePath, "\\W", "") + " : " + section, configName),
                         defaultValue,
@@ -203,9 +217,9 @@ namespace NewMoon.Modules
             return configValue.BoxedValue;
         }
 
-        public static T DualBindToConfig<T>(string section, ConfigFile config, string configName, T defaultValue, string configDesc)
+        public static T DualBindToConfig<T>(string section, ConfigFile config, string configName, T defaultValue, string configDesc, float minValue = 0f, float maxValue = 100f)
         {
-            return (T)DualBindToConfig(typeof(T), section, config, configName, defaultValue, configDesc);
+            return (T)DualBindToConfig(typeof(T), section, config, configName, defaultValue, configDesc, minValue, maxValue);
         }
 
         private static bool ConfigEqual(object a, object b)

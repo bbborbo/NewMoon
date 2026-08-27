@@ -31,7 +31,6 @@ namespace NewMoon.Items
 			return NewMoonPlugin.DoPillarItemDrop;
 		}
 		#region config
-		public override string ConfigName => "Items : Commencement : Relic of Blood";
 
         //[AutoConfig("Heal Fraction On Kill Base", 0.08f)]
         public static float healFractionOnKillBase = 0.08f;
@@ -49,15 +48,15 @@ namespace NewMoon.Items
 		public static float lifeStealRadiusBase = 16f;
 		[AutoConfig("Life Steal Radius (Stack)", 0)]
 		public static float lifeStealRadiusStack = 0f;
-		[AutoConfig("Life Steal Fraction (Base)", 0.05f)]
+		[AutoConfig("Life Steal Fraction (Base)", 0.05f, 0f, 1f)]
 		public static float lifeStealAmountBase = 0.05f;
-		[AutoConfig("Life Steal Fraction (Stack)", 0.025f)]
+		[AutoConfig("Life Steal Fraction (Stack)", 0.025f, 0f, 1f)]
 		public static float lifeStealAmountStack = 0.025f;
 		[AutoConfig("Bleed Chance (Base)", 10f)]
 		public static float bleedChanceBase = 10f;
 		[AutoConfig("Bleed Chance (Stack)", 0f)]
 		public static float bleedChanceStack = 0f;
-		[AutoConfig("Bleed Damage Life Steal Multiplier", 0.5f)]
+		[AutoConfig("Bleed Damage Life Steal Multiplier", 0.5f, 0f, 1f)]
 		public static float bleedEffectiveProcCoeff = 0.5f;
 		#endregion
 		public static BuffDef hiddenForceTriggerCount;

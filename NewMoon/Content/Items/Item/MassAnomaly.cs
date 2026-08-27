@@ -27,9 +27,8 @@ namespace NewMoon.Items
         {
             return NewMoonPlugin.DoPillarItemDrop;
         }
-        public override string ConfigName => "Items : Commencement : Relic of Mass";
         public static BuffDef beetleArmor;
-        [AutoConfig("Chimera Armor Max Layers", 3)]
+        [AutoConfig("Chimera Armor Max Layers", 3, 0f, 10f)]
         public static int maxBeetleArmorStacks = 3;
         [AutoConfig("Chimera Armor Recharge Duration", 5f)]
         public static float durationPerBeetleArmor = 5f;
