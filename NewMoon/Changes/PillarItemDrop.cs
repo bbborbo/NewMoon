@@ -59,12 +59,11 @@ namespace NewMoon
         private void MoonBossRush(On.RoR2.MoonBatteryMissionController.orig_OnEnable orig, MoonBatteryMissionController self)
         {
 			orig(self);
-			if (NewMoonPlugin.TeamHasRelics(TeamIndex.Player))
+			if (NewMoonPlugin.TeamHasRelics(TeamIndex.Player) && NetworkServer.active)
 			{
-				self.Network_numChargedBatteries = requiredPillarCt;
 				isBossRush = true;
 				Chat.ServerAttemptBroadcastChat($"{MithrixStyle("The King of Nothing welcomes you...")}");
-				self.OnBatteryCharged(null);
+				ServerUpdatePillarsAndElevators(self, wasCharged: false, hasMetRequirement: true, hasMetMax: false);
 			}
 		}
 
@@ -113,22 +112,14 @@ namespace NewMoon
 		}
         #endregion
 
-        private void ChangePillarRequirement(On.RoR2.MoonBatteryMissionController.orig_OnBatteryCharged orig, MoonBatteryMissionController self, HoldoutZoneController holdoutZone)
-		{
-			bool wasCharged = self._numChargedBatteries >= requiredPillarCt;
-
-			if (holdoutZone != null)
-				self.Network_numChargedBatteries = self._numChargedBatteries + 1;
-
-			if (!NetworkServer.active)
-				return;
-
-			if (self._numChargedBatteries >= self._numRequiredBatteries)
+		private void ServerUpdatePillarsAndElevators(MoonBatteryMissionController self, bool wasCharged, bool hasMetRequirement, bool hasMetMax)
+        {
+			if (hasMetRequirement)
 			{
-                if (wasCharged == false)
-                {
+				if (wasCharged == false)
+				{
 					Chat.ServerAttemptBroadcastChat($"{MithrixStyle("A path forward is cleared...")}");
-                }
+				}
 				for (int k = 0; k < self.elevatorStateMachines.Length; k++)
 				{
 					self.elevatorStateMachines[k].SetNextState(new InactiveToReady());
@@ -136,12 +127,7 @@ namespace NewMoon
 			}
 			else
 				return;
-
-			int maxPillarCount = maxPillarCt;
-			if (isBossRush)
-				maxPillarCount = maxPillarCount - requiredPillarCt;
-
-			if (self._numChargedBatteries >= maxPillarCount)
+            if (hasMetMax)
 			{
 				for (int i = 0; i < self.batteryHoldoutZones.Length; i++)
 				{
@@ -160,6 +146,28 @@ namespace NewMoon
 					}
 				}
 			}
+        }
+
+        private void ChangePillarRequirement(On.RoR2.MoonBatteryMissionController.orig_OnBatteryCharged orig, MoonBatteryMissionController self, HoldoutZoneController holdoutZone)
+		{
+			int requiredBatteries = requiredPillarCt;
+			int maxBatteries = maxPillarCt;
+			if (isBossRush)
+			{
+				requiredBatteries = 0;
+				maxBatteries = maxBatteries - requiredPillarCt;
+			}
+			bool wasCharged = self._numChargedBatteries >= requiredPillarCt;
+
+			if (holdoutZone != null)
+            {
+				self.Network_numChargedBatteries = self._numChargedBatteries + 1;
+			}
+
+			if (!NetworkServer.active)
+				return;
+
+			ServerUpdatePillarsAndElevators(self, wasCharged, self._numChargedBatteries >= requiredBatteries, self._numChargedBatteries >= maxBatteries);
 		}
 
         private void ReduceRequiredPillars(On.RoR2.MoonBatteryMissionController.orig_Awake orig, MoonBatteryMissionController self)

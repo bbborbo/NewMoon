@@ -37,6 +37,7 @@ namespace NewMoon
     [BepInDependency(R2API.RecalculateStatsAPI.PluginGUID, BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency(R2API.EliteAPI.PluginGUID, BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency(R2API.ProcTypeAPI.PluginGUID, BepInDependency.DependencyFlags.HardDependency)]
+    [BepInDependency(RiskOfOptions.PluginInfo.PLUGIN_GUID, BepInDependency.DependencyFlags.SoftDependency)]
 
     [NetworkCompatibility(CompatibilityLevel.EveryoneMustHaveMod, VersionStrictness.EveryoneNeedSameModVersion)]
     [BepInPlugin(guid, modName, version)]
@@ -45,7 +46,7 @@ namespace NewMoon
         public const string guid = "com." + teamName + "." + modName;
         public const string teamName = "RiskOfBrainrot";
         public const string modName = "NewMoon";
-        public const string version = "2.0.0";
+        public const string version = "2.0.3";
 
         public static NewMoonPlugin instance;
         public static AssetBundle mainAssetBundle => CommonAssets.mainAssetBundle;
@@ -57,23 +58,26 @@ namespace NewMoon
         {
             if (DoPillarItemDrop == false)
                 return false;
-            int num = 0;
+            int relicTotal = 0;
             ReadOnlyCollection<CharacterMaster> readOnlyInstancesList = CharacterMaster.readOnlyInstancesList;
             int i = 0;
-            int count = readOnlyInstancesList.Count;
-            while (i < count)
+            int playerCount = 0;
+            int masterCount = readOnlyInstancesList.Count;
+            while (i < masterCount)
             {
                 CharacterMaster characterMaster = readOnlyInstancesList[i];
                 if (characterMaster.teamIndex == teamIndex && 
-                    (!characterMaster.playerCharacterMasterController || characterMaster.playerCharacterMasterController.isConnected))
+                    (characterMaster.playerCharacterMasterController && characterMaster.playerCharacterMasterController.isConnected))
                 {
-                    num += characterMaster.inventory.GetItemCountEffective(SoulAnomaly.instance.ItemsDef);
-                    num += characterMaster.inventory.GetItemCountEffective(BloodAnomaly.instance.ItemsDef);
-                    num += characterMaster.inventory.GetItemCountEffective(DesignAnomaly.instance.ItemsDef);
-                    num += characterMaster.inventory.GetItemCountEffective(MassAnomaly.instance.ItemsDef);
+                    playerCount++;
+                    relicTotal += characterMaster.inventory.GetItemCountEffective(SoulAnomaly.instance.ItemsDef)
+                        + characterMaster.inventory.GetItemCountEffective(BloodAnomaly.instance.ItemsDef)
+                        + characterMaster.inventory.GetItemCountEffective(DesignAnomaly.instance.ItemsDef)
+                        + characterMaster.inventory.GetItemCountEffective(MassAnomaly.instance.ItemsDef);
                 }
                 i++;
-                if (num > count)
+                Debug.Log("relics: " + relicTotal);
+                if (relicTotal >= playerCount)
                     return true;
             }
             return false;
@@ -334,5 +338,10 @@ namespace NewMoon
             };
         }
         #endregion
+
+        public static void DebugBreakpoint(string methodName, int breakpointNumber = -1)
+        {
+            Log.DebugBreakpoint(methodName, breakpointNumber);
+        }
     }
 }
