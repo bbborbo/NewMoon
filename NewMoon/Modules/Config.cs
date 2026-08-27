@@ -5,6 +5,9 @@ using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using BepInEx;
 using BepInEx.Configuration;
+using RiskOfOptions;
+using RiskOfOptions.OptionConfigs;
+using RiskOfOptions.Options;
 using UnityEngine;
 
 namespace NewMoon.Modules
@@ -69,9 +72,9 @@ namespace NewMoon.Modules
                                         true);
         }
 
-        public static ConfigEntry<T> BindAndOptions<T>(string section, string name, T defaultValue, string description = "", bool restartRequired = false) =>
+        public static ConfigEntry<T> BindAndOptions<T>(string section, string name, T defaultValue, string description = "", bool restartRequired = true) =>
             BindAndOptions<T>(section, name, defaultValue, 0, 20, description, restartRequired);
-        public static ConfigEntry<T> BindAndOptions<T>(string section, string name, T defaultValue, float min, float max, string description = "", bool restartRequired = false)
+        public static ConfigEntry<T> BindAndOptions<T>(string section, string name, T defaultValue, float min, float max, string description = "", bool restartRequired = true)
         {
             if (string.IsNullOrEmpty(description))
             {
@@ -93,29 +96,29 @@ namespace NewMoon.Modules
         }
 
         //back compat
-        public static ConfigEntry<float> BindAndOptionsSlider(string section, string name, float defaultValue, string description, float min = 0, float max = 20, bool restartRequired = false) =>
+        public static ConfigEntry<float> BindAndOptionsSlider(string section, string name, float defaultValue, string description, float min = 0, float max = 20, bool restartRequired = true) =>
             BindAndOptions<float>(section, name, defaultValue, min, max, description, restartRequired);
 
         //add risk of options dll to your project libs and uncomment this for a soft dependency
         [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
         private static void TryRegisterOption<T>(ConfigEntry<T> entry, float min, float max, bool restartRequired)
         {
-            //if (entry is ConfigEntry<float>)
-            //{
-            //    ModSettingsManager.AddOption(new SliderOption(entry as ConfigEntry<float>, new SliderConfig() { min = min, max = max, formatString = "{0:0.00}", restartRequired = restartRequired }));
-            //}
-            //if (entry is ConfigEntry<int>)
-            //{
-            //    ModSettingsManager.AddOption(new IntSliderOption(entry as ConfigEntry<int>, new IntSliderConfig() { min = (int)min, max = (int)max, restartRequired = restartRequired }));
-            //}
-            //if (entry is ConfigEntry<bool>)
-            //{
-            //    ModSettingsManager.AddOption(new CheckBoxOption(entry as ConfigEntry<bool>, restartRequired));
-            //}
-            //if (entry is BepInEx.Configuration.ConfigEntry<KeyboardShortcut>)
-            //{
-            //    ModSettingsManager.AddOption(new KeyBindOption(entry as ConfigEntry<KeyboardShortcut>, restartRequired));
-            //}
+            if (entry is ConfigEntry<float>)
+            {
+                ModSettingsManager.AddOption(new SliderOption(entry as ConfigEntry<float>, new SliderConfig() { min = min, max = max, formatString = "{0:0.00}", restartRequired = restartRequired }));
+            }
+            if (entry is ConfigEntry<int>)
+            {
+                ModSettingsManager.AddOption(new IntSliderOption(entry as ConfigEntry<int>, new IntSliderConfig() { min = (int)min, max = (int)max, restartRequired = restartRequired }));
+            }
+            if (entry is ConfigEntry<bool>)
+            {
+                ModSettingsManager.AddOption(new CheckBoxOption(entry as ConfigEntry<bool>, restartRequired));
+            }
+            if (entry is BepInEx.Configuration.ConfigEntry<KeyboardShortcut>)
+            {
+                ModSettingsManager.AddOption(new KeyBindOption(entry as ConfigEntry<KeyboardShortcut>, restartRequired));
+            }
         }
 
         //Taken from https://github.com/ToastedOven/CustomEmotesAPI/blob/main/CustomEmotesAPI/CustomEmotesAPI/CustomEmotesAPI.cs

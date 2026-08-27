@@ -33,6 +33,7 @@
     <PackageReference Include="R2API.RecalculateStats" Version="1.6.5" />
     <PackageReference Include="R2API.ProcType" Version="1.0.2" />
     <PackageReference Include="R2API.DamageType" Version="1.1.7" />
+    <PackageReference Include="R2API.Buffs" Version="*" />
   </ItemGroup>
 
   <ItemGroup>
@@ -50,6 +51,9 @@
     </Reference>
     <Reference Include="ProcSolver">
       <HintPath>libs\ProcSolver.dll</HintPath>
+    </Reference>
+    <Reference Include="RiskOfOptions">
+      <HintPath>libs\RiskOfOptions.dll</HintPath>
     </Reference>
   </ItemGroup>
 
