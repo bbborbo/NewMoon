@@ -68,7 +68,7 @@ namespace NewMoon
             int masterCount = readOnlyInstancesList.Count;
             while (i < masterCount)
             {
-                CharacterMaster characterMaster = readOnlyInstancesList[i];
+                CharacterMaster characterMaster = readOnlyInstancesList[i].master;
                 if (characterMaster.teamIndex == teamIndex && 
                     (characterMaster.playerCharacterMasterController && characterMaster.playerCharacterMasterController.isConnected))
                 {
