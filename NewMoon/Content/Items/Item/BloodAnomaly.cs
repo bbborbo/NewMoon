@@ -341,12 +341,13 @@ namespace NewMoon.Items
 				{
 					return;
 				}
-				if (value)
+				if (value == true)
 				{
 					this.nearbyDamageBonusIndicator = UnityEngine.Object.Instantiate<GameObject>(BloodAnomaly.radiusIndicatorPrefab, base.body.corePosition, Quaternion.identity);
 					this.nearbyDamageBonusIndicator.GetComponent<NetworkedBodyAttachment>().AttachToGameObjectAndSpawn(base.gameObject, null);
 					return;
 				}
+				//false
 				UnityEngine.Object.Destroy(this.nearbyDamageBonusIndicator);
 				this.nearbyDamageBonusIndicator = null;
 			}

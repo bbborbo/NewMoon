@@ -22,6 +22,7 @@ namespace NewMoon.Components
             Soul
         }
         public PillarType pillarType = PillarType.None;
+        public bool disabled = false;
         public bool shouldDropItem = false;
         public bool shouldDropPotential = false;
         GameObject voidPotentialPrefab => Addressables.LoadAssetAsync<GameObject>(RoR2BepInExPack.GameAssetPaths.RoR2_DLC1_OptionPickup.OptionPickup_prefab).WaitForCompletion();
@@ -60,6 +61,8 @@ namespace NewMoon.Components
         }
         public void DropPillarItemFromHoldout(HoldoutZoneController holdoutZone)
         {
+            if (disabled == true)
+                return;
             int participatingPlayerCount = Run.instance ? Run.instance.participatingPlayerCount : 0;
             if (participatingPlayerCount == 0)
                 return;

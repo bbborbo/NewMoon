@@ -10,6 +10,8 @@ using NewMoon.Components;
 using System;
 using EntityStates.Missions.Moon;
 using static NewMoon.Modules.Language.Styling;
+using MonoMod.Cil;
+using Mono.Cecil.Cil;
 
 namespace NewMoon
 {
@@ -30,7 +32,9 @@ namespace NewMoon
 			//On.RoR2.MoonBatteryMissionController.OnBatteryCharged += PillarsDropItems;
 			On.RoR2.MoonBatteryMissionController.Awake += ReduceRequiredPillars;
 			On.RoR2.MoonBatteryMissionController.OnEnable += MoonBossRush;
+			On.EntityStates.MoonElevator.Inactive.OnEnter += PillarSkip;
 			On.RoR2.MoonBatteryMissionController.OnBatteryCharged += ChangePillarRequirement;
+			On.RoR2.UI.MoonBatteryMissionObjectiveTracker.GenerateString += ChangePillarObjective;
 			On.EntityStates.Missions.GeodeSecretMission.GeodeSecretMissionRewardState.DropRewards += ReplaceGeodeSecretMissionRewards;
 
 			NewMoonPlugin.LoadAsync<GameObject>(RoR2BepInExPack.GameAssetPaths.RoR2_Base_moon2.MoonBatteryBlood_prefab, 
@@ -54,17 +58,44 @@ namespace NewMoon
 				PillarItemDropper dropper = pillarPrefab.AddComponent<PillarItemDropper>();
 				dropper.pillarType = pillarType;
 			}
+
+			IL.RoR2.Karma.CollectLunarItems.onInventoryChangedGlobal += HideRelicsFromKarmaTrigger;
 		}
 
-        private void MoonBossRush(On.RoR2.MoonBatteryMissionController.orig_OnEnable orig, MoonBatteryMissionController self)
+		private void HideRelicsFromKarmaTrigger(ILContext il)
         {
-			orig(self);
-			if (NewMoonPlugin.TeamHasRelics(TeamIndex.Player) && NetworkServer.active)
+			ILCursor c = new ILCursor(il);
+
+			bool b = c.TryGotoNext(MoveType.Before,
+				x => x.MatchCallOrCallvirt<Inventory>(nameof(Inventory.GetTotalItemCountOfTier)))
+				&& c.TryGotoNext(MoveType.Before,
+				x => x.MatchStloc(out _)
+				);
+			if(b == false) 
 			{
-				isBossRush = true;
-				Chat.ServerAttemptBroadcastChat($"{MithrixStyle("The King of Nothing welcomes you...")}");
-				ServerUpdatePillarsAndElevators(self, wasCharged: false, hasMetRequirement: true, hasMetMax: false);
+				NewMoonPlugin.DebugBreakpoint(nameof(HideRelicsFromKarmaTrigger));
+				return;
 			}
+			c.Emit(OpCodes.Ldarg_1);
+			c.EmitDelegate<Func<int, Inventory, int>>((countIn, inv) =>
+			{
+				countIn -= inv.GetItemCountEffective(BloodAnomaly.instance.ItemsDef);
+				countIn -= inv.GetItemCountEffective(SoulAnomaly.instance.ItemsDef);
+				countIn -= inv.GetItemCountEffective(MassAnomaly.instance.ItemsDef);
+				countIn -= inv.GetItemCountEffective(DesignAnomaly.instance.ItemsDef);
+				return countIn;
+			});
+        }
+
+        private string ChangePillarObjective(On.RoR2.UI.MoonBatteryMissionObjectiveTracker.orig_GenerateString orig, RoR2.UI.MoonBatteryMissionObjectiveTracker self)
+		{
+			MoonBatteryMissionController moonBatteryMissionController = (MoonBatteryMissionController)self.sourceDescriptor.source;
+			self.numChargedBatteries = moonBatteryMissionController.numChargedBatteries;
+			int requiredCt = isBossRush ? 0 : requiredPillarCt;
+			string required = requiredCt.ToString();
+			if (requiredCt != maxPillarCt)
+				required += "..?";
+			return string.Format(Language.GetString(moonBatteryMissionController.objectiveToken), self.numChargedBatteries, required);
 		}
 
         #region meridian
@@ -95,7 +126,8 @@ namespace NewMoon
 							TPkp(SoulAnomaly.instance.ItemsDef) 
 						},
 						rotation = Quaternion.identity,
-						prefabOverride = self.geodeSecretMissionController.rewardPrefab
+						prefabOverride = self.geodeSecretMissionController.rewardPrefab,
+						maxOptionCount = 2
 					}, position, vector);
 					i++;
 					vector = rotation * vector;
@@ -131,11 +163,14 @@ namespace NewMoon
 			{
 				for (int i = 0; i < self.batteryHoldoutZones.Length; i++)
 				{
-					if (self.batteryHoldoutZones[i].enabled)
+					HoldoutZoneController zone = self.batteryHoldoutZones[i];
+					if (zone.enabled)
 					{
-						self.batteryHoldoutZones[i].FullyChargeHoldoutZone();
-						self.batteryHoldoutZones[i].onCharged.RemoveListener(new UnityAction<HoldoutZoneController>(self.OnBatteryCharged));
+						zone.FullyChargeHoldoutZone();
+						zone.onCharged.RemoveListener(new UnityAction<HoldoutZoneController>(self.OnBatteryCharged));
 					}
+					if (zone.TryGetComponent(out PillarItemDropper dropper))
+						dropper.disabled = true;
 				}
 				self.batteryHoldoutZones = new HoldoutZoneController[0];
 				for (int j = 0; j < self.batteryStateMachines.Length; j++)
@@ -157,6 +192,8 @@ namespace NewMoon
 				requiredBatteries = 0;
 				maxBatteries = maxBatteries - requiredPillarCt;
 			}
+			if (!NetworkServer.active)
+				return;
 			bool wasCharged = self._numChargedBatteries >= requiredPillarCt;
 
 			if (holdoutZone != null)
@@ -164,13 +201,31 @@ namespace NewMoon
 				self.Network_numChargedBatteries = self._numChargedBatteries + 1;
 			}
 
-			if (!NetworkServer.active)
-				return;
 
 			ServerUpdatePillarsAndElevators(self, wasCharged, self._numChargedBatteries >= requiredBatteries, self._numChargedBatteries >= maxBatteries);
 		}
 
-        private void ReduceRequiredPillars(On.RoR2.MoonBatteryMissionController.orig_Awake orig, MoonBatteryMissionController self)
+		private void PillarSkip(On.EntityStates.MoonElevator.Inactive.orig_OnEnter orig, Inactive self)
+		{
+			orig(self);
+			if (isBossRush || (MoonBatteryMissionController.instance && MoonBatteryMissionController.instance.numChargedBatteries >= MoonBatteryMissionController.instance.numRequiredBatteries))
+			{
+				self.outer.SetNextState(new InactiveToReady());
+			}
+		}
+
+		private void MoonBossRush(On.RoR2.MoonBatteryMissionController.orig_OnEnable orig, MoonBatteryMissionController self)
+		{
+			orig(self);
+			if (NewMoonPlugin.TeamHasRelics(TeamIndex.Player) && NetworkServer.active)
+			{
+				isBossRush = true;
+				Chat.ServerAttemptBroadcastChat($"{MithrixStyle("The King of Nothing welcomes you...")}");
+				ServerUpdatePillarsAndElevators(self, wasCharged: false, hasMetRequirement: true, hasMetMax: false);
+			}
+		}
+
+		private void ReduceRequiredPillars(On.RoR2.MoonBatteryMissionController.orig_Awake orig, MoonBatteryMissionController self)
 		{
 			isBossRush = false;
 
