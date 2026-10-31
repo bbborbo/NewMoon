@@ -19,6 +19,7 @@ using NewMoon.Items;
 using NewMoon.Artifacts;
 using ProcSolver;
 using System.Collections.ObjectModel;
+using MissileRework;
 
 #pragma warning disable CS0618 // Type or member is obsolete
 [assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
@@ -33,10 +34,12 @@ namespace NewMoon
     [BepInDependency(R2API.LanguageAPI.PluginGUID, BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency(R2API.PrefabAPI.PluginGUID, BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency(R2API.DirectorAPI.PluginGUID, BepInDependency.DependencyFlags.HardDependency)]
+    [BepInDependency(R2API.DamageAPI.PluginGUID, BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency(R2API.ItemAPI.PluginGUID, BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency(R2API.RecalculateStatsAPI.PluginGUID, BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency(R2API.EliteAPI.PluginGUID, BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency(R2API.ProcTypeAPI.PluginGUID, BepInDependency.DependencyFlags.HardDependency)]
+    [BepInDependency(R2API.Networking.NetworkingAPI.PluginGUID, BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency("com.rune580.riskofoptions", BepInDependency.DependencyFlags.SoftDependency)]
 
     [NetworkCompatibility(CompatibilityLevel.EveryoneMustHaveMod, VersionStrictness.EveryoneNeedSameModVersion)]
@@ -46,7 +49,7 @@ namespace NewMoon
         public const string guid = "com." + teamName + "." + modName;
         public const string teamName = "RiskOfBrainrot";
         public const string modName = "NewMoon";
-        public const string version = "2.0.3";
+        public const string version = "2.0.6";
 
         public static NewMoonPlugin instance;
         public static AssetBundle mainAssetBundle => CommonAssets.mainAssetBundle;
@@ -59,7 +62,7 @@ namespace NewMoon
             if (DoPillarItemDrop == false)
                 return false;
             int relicTotal = 0;
-            ReadOnlyCollection<CharacterMaster> readOnlyInstancesList = CharacterMaster.readOnlyInstancesList;
+            ReadOnlyCollection<PlayerCharacterMasterController> readOnlyInstancesList = PlayerCharacterMasterController._instancesReadOnly;
             int i = 0;
             int playerCount = 0;
             int masterCount = readOnlyInstancesList.Count;
@@ -76,7 +79,6 @@ namespace NewMoon
                         + characterMaster.inventory.GetItemCountEffective(MassAnomaly.instance.ItemsDef);
                 }
                 i++;
-                Debug.Log("relics: " + relicTotal);
                 if (relicTotal >= playerCount)
                     return true;
             }
@@ -86,22 +88,24 @@ namespace NewMoon
         #region config
         public static bool DoPillarItemDrop = false;
         #endregion
+
         #region compat
-        public static bool procSolverInstalled => Tools.isLoaded(ProcSolverPlugin.guid);
-        public static float GetProcRate(DamageInfo damageInfo)
-        {
-            if (damageInfo.procCoefficient <= 0 || !procSolverInstalled)
-                return damageInfo.procCoefficient;
+public static bool ModLoaded(string modGuid) => modGuid.IsNullOrWhiteSpace() == false && BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey(modGuid);
+public static bool procSolverInstalled => ModLoaded(ProcSolverPlugin.guid);
+public static float GetProcRate(DamageInfo damageInfo)
+{
+    if (damageInfo.procCoefficient <= 0 || !procSolverInstalled)
+        return damageInfo.procCoefficient;
 
-            return _GetProcRate(damageInfo);
-        }
+    return _GetProcRate(damageInfo);
+}
 
-        [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
-        private static float _GetProcRate(DamageInfo damageInfo)
-        {
-            return ProcSolverPlugin.GetProcRateMod(damageInfo);
-        }
-    #endregion
+[MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
+private static float _GetProcRate(DamageInfo damageInfo)
+{
+    return ProcSolverPlugin.GetProcRateMod(damageInfo);
+}
+        #endregion
         void Awake()
         {
             instance = this;
