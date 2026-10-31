@@ -100,28 +100,74 @@ namespace NewMoon.Items
             base.Init();
             ItemAPI.ApplyTagToItem(NewMoonPlugin.IsMoonRelic, ItemsDef);
 
-            NewMoonPlugin.LoadAsync<GameObject>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_LunarWisp.LunarWispTrackingBomb_prefab, CreateSoulProjectile);
+            
+            NewMoonPlugin.LoadAsync<GameObject>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_Scav.ScavSackProjectile_prefab, CreateSoulProjectile);
+            NewMoonPlugin.LoadAsync<GameObject>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_Brother.BrotherBody_prefab, (ctx) => EatSomeBreakfastBoy(ctx, 1500));
+            NewMoonPlugin.LoadAsync<GameObject>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_Brother.BrotherHurtBody_prefab, (ctx) => EatSomeBreakfastBoy(ctx, 3000));
+        }
+
+        private void EatSomeBreakfastBoy(GameObject bodyObject, float mass)
+        {
+            if(bodyObject.TryGetComponent(out CharacterMotor motor))
+            {
+                motor.mass = mass;
+            }
         }
 
         private void CreateSoulProjectile(GameObject lunarWispTrackingBomb)
         {
             soulProjectile = lunarWispTrackingBomb.InstantiateClone("SoulRelicProjectile", true);
 
-            HealthComponent hc;
-            if(soulProjectile.TryGetComponent(out hc))
+            if(soulProjectile.TryGetComponent(out Rigidbody rb))
             {
-                hc.globalDeathEventChanceCoefficient = 0;
-                hc.health = 1;
-                hc.isDefaultGodMode = true;
+                rb.useGravity = false;
             }
 
-            ProjectileGrantOnKillOnDestroy onKillTrigger = soulProjectile.AddComponent<ProjectileGrantOnKillOnDestroy>();
-            onKillTrigger.healthComponent = hc;
-
-            if(soulProjectile.TryGetComponent(out ProjectileDirectionalTargetFinder pdtf))
+            if(soulProjectile.TryGetComponent(out ProjectileSimple ps))
             {
-                pdtf.lookRange = 100f;
-                pdtf.lookCone = 35f;
+                ps.lifetime = 15;
+                ps.desiredForwardSpeed = 60;
+                ps.updateAfterFiring = true;
+            }
+
+            if(soulProjectile.TryGetComponent(out ProjectileController pc))
+            {
+                pc.cannotBeDeleted = true;
+                NewMoonPlugin.LoadAsync<GameObject>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_LunarWisp.LunarWispTrackingBombGhost_prefab, (ghost) =>
+                {
+                    pc.ghostPrefab = ghost;
+                });
+            }
+
+            if (soulProjectile.TryGetComponent(out ProjectileImpactExplosion pie))
+            {
+                NewMoonPlugin.LoadAsync<GameObject>(RoR2BepInExPack.GameAssetPaths.Version_1_39_0.RoR2_Base_LunarWisp.LunarWispTrackingBombExplosion_prefab, (explosion) =>
+                {
+                    pie.impactEffect = explosion;
+                });
+                pie.bonusBlastForce = Vector3.zero;
+                pie.blastRadius = 9;
+                pie.destroyOnEnemy = true;
+            }
+
+            ProjectileTargetComponent ptc = soulProjectile.AddComponent<ProjectileTargetComponent>();
+            ProjectileDirectionalTargetFinder pdtf = soulProjectile.AddComponent<ProjectileDirectionalTargetFinder>();
+            pdtf.lookRange = 200f;
+            pdtf.lookCone = 45f;
+            pdtf.targetSearchInterval = 0.5f;
+            pdtf.onlySearchIfNoTarget = true;
+            ProjectileSteerTowardTarget pstt = soulProjectile.AddComponent<ProjectileSteerTowardTarget>();
+            pstt.targetComponent = ptc;
+            pstt.rotationSpeed = 90;
+
+            //VelocityRandomOnStart vros = soulProjectile.AddComponent<VelocityRandomOnStart>();
+            //vros.maxSpeed = 60;
+            //vros.minSpeed = 30;
+            //vros.coneAngle = 15;
+
+            if(soulProjectile.TryGetComponent(out ApplyTorqueOnStart torque))
+            {
+                torque.enabled = false;
             }
 
             Content.AddProjectilePrefab(soulProjectile);
