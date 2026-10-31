@@ -203,6 +203,11 @@ namespace NewMoon.Items
                 mask.AddModdedProc(soulProjectileProcType);
                 fpi.procChainMask = mask;
                 ProjectileManager.instance.FireProjectile(fpi);
+
+                if (RainrotSharedUtils.MoreProjectiles.MoreProjectilesModule.IsMoreProjectilesActiveForBody(attackerBody))
+                {
+                    RainrotSharedUtils.MoreProjectiles.MoreProjectilesModule.FireWarfareFlankProjectiles(aimRay, fpi, 25);
+                }
             }
         }
 
